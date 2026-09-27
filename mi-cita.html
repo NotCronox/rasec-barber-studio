@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Consulta o cancela tu cita en Rasec Barber Studio con tu codigo de reserva." />
+    <title>Mi cita · Rasec Barber Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:wght@700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./src/styles.css" />
+    <script src="./src/data.js" defer></script>
+    <script src="./src/utils.js" defer></script>
+    <script src="./src/store.js" defer></script>
+    <script src="./src/mi-cita.js" defer></script>
+  </head>
+  <body class="utility-body">
+    <header class="utility-header">
+      <a class="utility-header__brand" href="index.html">
+        <span class="utility-header__mark" data-brand-mark>RB</span>
+        <span>
+          <strong data-business-name>Rasec Barber Studio</strong>
+          <small>Mi cita</small>
+        </span>
+      </a>
+      <a class="utility-header__back" href="index.html">&larr; Volver al inicio</a>
+    </header>
+
+    <main class="booking booking--narrow">
+      <section class="booking-hero">
+        <p class="eyebrow">Mi cita</p>
+        <h1>Consulta o cancela tu cita</h1>
+        <p>Escribe el codigo que recibiste al reservar y el telefono con el que agendaste.</p>
+      </section>
+
+      <div class="booking-card">
+        <form class="booking-form" data-lookup-form>
+          <label>
+            Codigo de reserva
+            <input type="text" data-lookup-code autocomplete="off" maxlength="12" placeholder="Ej: K7Q2MX" required />
+          </label>
+          <label>
+            Telefono
+            <input type="tel" data-lookup-phone autocomplete="tel" required />
+          </label>
+          <button type="submit" class="button button--primary">Buscar mi cita</button>
+          <p class="booking-error" data-lookup-error hidden></p>
+        </form>
+
+        <div class="manage-result" data-lookup-result hidden>
+          <div class="manage-result__head">
+            <h2>Tu cita</h2>
+            <span class="badge" data-result-status></span>
+          </div>
+          <div class="booking-summary" data-result-summary></div>
+          <p class="manage-result__note" data-result-note hidden></p>
+
+          <div class="manage-result__actions" data-cancel-area hidden>
+            <button type="button" class="button button--outline-dark button--danger" data-cancel-start>Cancelar mi cita</button>
+            <div class="cancel-confirm" data-cancel-confirm hidden>
+              <p>¿Seguro que quieres cancelar? El horario quedara libre para otra persona.</p>
+              <div class="cancel-confirm__buttons">
+                <button type="button" class="button button--small button--danger-solid" data-cancel-yes>Si, cancelar</button>
+                <button type="button" class="button button--small button--outline-dark" data-cancel-no>No, mantener</button>
+              </div>
+            </div>
+          </div>
+
+          <a class="button button--outline-dark" href="reserva.html" data-rebook hidden>Agendar una nueva cita</a>
+        </div>
+      </div>
+    </main>
+  </body>
+</html>

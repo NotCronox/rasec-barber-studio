@@ -106,6 +106,9 @@ window.RASEC_BARBERIA_DATA = {
       image:
         "https://images.pexels.com/photos/8552627/pexels-photo-8552627.jpeg?auto=compress&cs=tinysrgb&w=900",
       available: true,
+      serviceIds: ["corte-clasico", "fade", "corte-barba"],
+      daysOff: ["Lunes"],
+      timeOff: [],
       gallery: [
         {
           src: "https://images.pexels.com/photos/18503633/pexels-photo-18503633.jpeg?auto=compress&cs=tinysrgb&w=800",
@@ -133,6 +136,9 @@ window.RASEC_BARBERIA_DATA = {
       image:
         "https://images.pexels.com/photos/12946033/pexels-photo-12946033.jpeg?auto=compress&cs=tinysrgb&w=900",
       available: true,
+      serviceIds: ["barba", "corte-barba"],
+      daysOff: ["Miercoles"],
+      timeOff: [],
       gallery: [
         {
           src: "https://images.pexels.com/photos/9153970/pexels-photo-9153970.jpeg?auto=compress&cs=tinysrgb&w=800",
@@ -160,6 +166,9 @@ window.RASEC_BARBERIA_DATA = {
       image:
         "https://images.pexels.com/photos/18483772/pexels-photo-18483772.jpeg?auto=compress&cs=tinysrgb&w=900",
       available: true,
+      serviceIds: ["corte-clasico", "barba", "corte-barba"],
+      daysOff: [],
+      timeOff: [],
       gallery: [
         {
           src: "https://images.pexels.com/photos/32329615/pexels-photo-32329615.jpeg?auto=compress&cs=tinysrgb&w=800",
@@ -294,6 +303,10 @@ window.RASEC_BARBERIA_DATA = {
     { day: "Sabado", open: true, start: "09:00", end: "17:00" },
     { day: "Domingo", open: false, start: null, end: null },
   ],
+
+  settings: {
+    bookingWindowDays: 30,
+  },
 
   notes: {
     title: "Recomendacion",

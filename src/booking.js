@@ -3,16 +3,14 @@
   const utils = window.RasecUtils;
   if (!store || !utils) return;
 
-  const { escapeHtml, formatMoneyCOP, formatDateLong, formatTime12h, toISODate, weekdayLabelFor } = utils;
+  const { escapeHtml, formatMoneyCOP, formatDateLong, formatTime12h, toISODate, todayISO, parseISODate, whatsAppLink } = utils;
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
 
-  const data = store.getState();
-
   const STEPS = ["service", "barber", "datetime", "customer", "confirm"];
-  const STEP_LABEL = { pendiente: "Pendiente", confirmada: "Confirmada", cancelada: "Cancelada" };
-  const SLOT_STEP_MINUTES = 30;
+
+  let data = store.getState();
 
   const draft = {
     serviceId: null,
@@ -27,18 +25,43 @@
   let stepIndex = 0;
   let furthestStep = 0;
   let calendarMonth = startOfMonth(new Date());
-  let lastBooking = null;
+  let completed = false;
 
   function startOfMonth(date) {
     return new Date(date.getFullYear(), date.getMonth(), 1);
   }
 
+  // ---------- Datos disponibles para el cliente ----------
+
+  function availableBarbers() {
+    return data.barbers.filter((barber) => barber.available);
+  }
+
+  function isServiceOffered(service) {
+    return service.available && availableBarbers().some((barber) => barber.serviceIds.includes(service.id));
+  }
+
   function findService(id) {
-    return data.services.find((service) => service.id === id && service.available);
+    return data.services.find((service) => service.id === id && isServiceOffered(service));
   }
 
   function findBarber(id) {
-    return data.barbers.find((barber) => barber.id === id && barber.available);
+    return availableBarbers().find((barber) => barber.id === id);
+  }
+
+  function barbersForService(serviceId) {
+    return availableBarbers().filter((barber) => barber.serviceIds.includes(serviceId));
+  }
+
+  function servicesForStep() {
+    const offered = data.services.filter(isServiceOffered);
+    const barber = findBarber(draft.barberId);
+    return barber ? offered.filter((service) => barber.serviceIds.includes(service.id)) : offered;
+  }
+
+  function barberDoesService(barberId, serviceId) {
+    const barber = findBarber(barberId);
+    return Boolean(barber && barber.serviceIds.includes(serviceId));
   }
 
   function applyQueryParams() {
@@ -47,23 +70,23 @@
     const barberId = params.get("barber");
     if (serviceId && findService(serviceId)) draft.serviceId = serviceId;
     if (barberId && findBarber(barberId)) draft.barberId = barberId;
-
-    if (draft.serviceId && draft.barberId) {
-      stepIndex = 2;
-    } else if (draft.serviceId) {
-      stepIndex = 1;
+    if (draft.serviceId && draft.barberId && !barberDoesService(draft.barberId, draft.serviceId)) {
+      draft.barberId = null;
     }
+
+    if (draft.serviceId && draft.barberId) stepIndex = 2;
+    else if (draft.serviceId) stepIndex = 1;
     furthestStep = stepIndex;
   }
 
   function setBrand() {
-    if (data.business) {
-      const mark = $("[data-brand-mark]");
-      const name = $("[data-business-name]");
-      if (mark) mark.textContent = data.business.initials;
-      if (name) name.textContent = data.business.name;
-    }
+    const mark = $("[data-brand-mark]");
+    const name = $("[data-business-name]");
+    if (mark) mark.textContent = data.business.initials;
+    if (name) name.textContent = data.business.name;
   }
+
+  // ---------- Pasos ----------
 
   function renderStepIndicator() {
     $$("[data-step-indicator]").forEach((item, index) => {
@@ -75,8 +98,22 @@
 
   function renderServiceOptions() {
     const container = $("[data-service-options]");
-    if (!container) return;
-    const services = data.services.filter((service) => service.available);
+    const note = $("[data-service-note]");
+    const barber = findBarber(draft.barberId);
+
+    if (note) {
+      note.hidden = !barber;
+      if (barber) {
+        note.innerHTML = `Mostrando los servicios de <strong>${escapeHtml(barber.name)}</strong>. <button type="button" class="booking-note__link" data-clear-barber>Ver todos los servicios</button>`;
+      }
+    }
+
+    const services = servicesForStep();
+    if (!services.length) {
+      container.innerHTML = `<p class="slots-empty">No hay servicios disponibles en este momento.</p>`;
+      return;
+    }
+
     container.innerHTML = services
       .map(
         (service) => `
@@ -95,8 +132,13 @@
 
   function renderBarberOptions() {
     const container = $("[data-barber-options]");
-    if (!container) return;
-    const barbers = data.barbers.filter((barber) => barber.available);
+    const barbers = barbersForService(draft.serviceId);
+
+    if (!barbers.length) {
+      container.innerHTML = `<p class="slots-empty">Ningun barbero ofrece este servicio por ahora. Elige otro servicio.</p>`;
+      return;
+    }
+
     container.innerHTML = barbers
       .map(
         (barber) => `
@@ -104,29 +146,46 @@
             <img src="${escapeHtml(barber.image)}" alt="${escapeHtml(barber.name)}" loading="lazy" />
             <strong>${escapeHtml(barber.name)}</strong>
             <span>${escapeHtml(barber.specialty)}</span>
+            ${barber.daysOff.length ? `<small>Descansa: ${escapeHtml(barber.daysOff.join(", "))}</small>` : ""}
           </button>
         `
       )
       .join("");
   }
 
+  function dayUnavailableReason(status, barber) {
+    switch (status.reason) {
+      case "closed":
+        return "La barberia esta cerrada";
+      case "day-off":
+        return `${barber.name} descansa este dia`;
+      case "time-off":
+        return `${barber.name} no esta disponible${status.note ? ` (${status.note})` : ""}`;
+      case "beyond-window":
+        return "Todavia no se abren reservas para esta fecha";
+      default:
+        return "";
+    }
+  }
+
   function renderCalendar() {
     const grid = $("[data-calendar-grid]");
     const label = $("[data-calendar-label]");
-    const prevButton = $("[data-calendar-prev]");
-    if (!grid || !label) return;
+    const hint = $("[data-calendar-hint]");
+    const service = findService(draft.serviceId);
+    const barber = findBarber(draft.barberId);
+    if (!grid || !service || !barber) return;
 
-    label.textContent = calendarMonth.toLocaleDateString("es-CO", { month: "long", year: "numeric" });
-
+    const maxISO = store.getMaxBookingDate();
+    const today = todayISO();
     const year = calendarMonth.getFullYear();
     const month = calendarMonth.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const startOffset = (firstDay.getDay() + 6) % 7;
+    const startOffset = (new Date(year, month, 1).getDay() + 6) % 7;
     const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const todayISO = toISODate(new Date());
-    const currentMonthStart = startOfMonth(new Date());
 
-    if (prevButton) prevButton.disabled = calendarMonth <= currentMonthStart;
+    label.textContent = calendarMonth.toLocaleDateString("es-CO", { month: "long", year: "numeric" });
+    $("[data-calendar-prev]").disabled = calendarMonth <= startOfMonth(new Date());
+    $("[data-calendar-next]").disabled = toISODate(new Date(year, month + 1, 1)) > maxISO;
 
     let html = "";
     for (let i = 0; i < startOffset; i++) {
@@ -134,128 +193,123 @@
     }
 
     for (let day = 1; day <= daysInMonth; day++) {
-      const cellDate = new Date(year, month, day);
-      const iso = toISODate(cellDate);
-      const weekday = weekdayLabelFor(cellDate);
-      const hoursDay = data.hours.find((item) => item.day === weekday);
-      const isPast = iso < todayISO;
-      const isClosed = !hoursDay || !hoursDay.open;
-      const disabled = isPast || isClosed;
-      const isSelected = draft.date === iso;
+      const iso = toISODate(new Date(year, month, day));
+      const status = store.getDateStatus(barber.id, iso);
+      let title = status.ok ? "" : dayUnavailableReason(status, barber);
+      let isFull = false;
 
-      html += `
-        <button type="button"
-          class="calendar__cell ${disabled ? "is-disabled" : ""} ${isSelected ? "is-selected" : ""}"
-          data-calendar-day="${iso}"
-          ${disabled ? "disabled" : ""}
-        >${day}</button>
-      `;
+      if (status.ok) {
+        const slots = store.getSlots({ barberId: barber.id, serviceId: service.id, date: iso });
+        isFull = !slots.some((slot) => slot.status === "free");
+        if (isFull) title = "Sin horarios libres";
+      }
+
+      const disabled = !status.ok || isFull;
+      const classes = [
+        "calendar__cell",
+        disabled ? "is-disabled" : "",
+        isFull ? "is-full" : "",
+        draft.date === iso ? "is-selected" : "",
+        iso === today ? "is-today" : "",
+      ].join(" ");
+
+      html += `<button type="button" class="${classes}" data-calendar-day="${iso}" ${disabled ? "disabled" : ""} title="${escapeHtml(title)}">${day}</button>`;
     }
 
     grid.innerHTML = html;
+
+    if (hint) {
+      const rest = barber.daysOff.length ? ` ${barber.name} descansa: ${barber.daysOff.join(", ")}.` : "";
+      hint.textContent = `Puedes reservar hasta el ${formatDateLong(maxISO)}.${rest}`;
+    }
   }
 
   function renderSlots() {
     const container = $("[data-slots]");
-    if (!container) return;
+    const service = findService(draft.serviceId);
+    const barber = findBarber(draft.barberId);
 
     if (!draft.date) {
       container.innerHTML = `<p class="slots-empty">Elige un dia en el calendario.</p>`;
       return;
     }
-
-    const service = findService(draft.serviceId);
-    if (!service) {
-      container.innerHTML = `<p class="slots-empty">Elige primero un servicio.</p>`;
+    if (!service || !barber) {
+      container.innerHTML = `<p class="slots-empty">Vuelve a elegir el servicio y el barbero.</p>`;
       return;
     }
 
-    const weekday = weekdayLabelFor(utils.parseISODate(draft.date));
-    const hoursDay = data.hours.find((item) => item.day === weekday);
-
-    if (!hoursDay || !hoursDay.open) {
-      container.innerHTML = `<p class="slots-empty">Cerrado ese dia. Elige otra fecha.</p>`;
-      return;
-    }
-
-    const openMinutes = store.timeToMinutes(hoursDay.start);
-    const closeMinutes = store.timeToMinutes(hoursDay.end);
-    const isToday = draft.date === toISODate(new Date());
-    const now = new Date();
-    const nowMinutes = now.getHours() * 60 + now.getMinutes();
-
-    const slots = [];
-    for (let cursor = openMinutes; cursor + service.durationMinutes <= closeMinutes; cursor += SLOT_STEP_MINUTES) {
-      slots.push(cursor);
+    const slots = store.getSlots({ barberId: barber.id, serviceId: service.id, date: draft.date });
+    if (draft.time && !slots.some((slot) => slot.time === draft.time && slot.status === "free")) {
+      draft.time = null;
     }
 
     if (!slots.length) {
-      container.innerHTML = `<p class="slots-empty">No hay horarios para este servicio ese dia.</p>`;
+      container.innerHTML = `<p class="slots-empty">No hay horarios para este dia. Elige otra fecha.</p>`;
       return;
     }
 
-    let anyAvailable = false;
-    const buttons = slots
-      .map((minutes) => {
-        const time = store.minutesToTime(minutes);
-        const isPast = isToday && minutes <= nowMinutes;
-        const isTaken = store.findConflict(draft.barberId, draft.date, minutes, service.durationMinutes);
-        const disabled = isPast || isTaken;
-        if (!disabled) anyAvailable = true;
-        const isSelected = draft.time === time;
-        return `
-          <button type="button"
-            class="slot ${disabled ? "is-disabled" : ""} ${isSelected ? "is-selected" : ""}"
-            data-slot="${time}"
-            ${disabled ? "disabled" : ""}
-            title="${isTaken ? "Ya reservado" : ""}"
-          >${formatTime12h(time)}</button>
-        `;
-      })
-      .join("");
-
-    container.innerHTML = buttons + (anyAvailable ? "" : `<p class="slots-empty">Todos los horarios de este dia estan ocupados.</p>`);
+    const anyFree = slots.some((slot) => slot.status === "free");
+    container.innerHTML =
+      slots
+        .map((slot) => {
+          const disabled = slot.status !== "free";
+          const title = slot.status === "taken" ? "Ya reservado" : slot.status === "past" ? "Ya paso" : "";
+          return `
+            <button type="button"
+              class="slot ${disabled ? "is-disabled" : ""} ${draft.time === slot.time ? "is-selected" : ""}"
+              data-slot="${slot.time}"
+              ${disabled ? "disabled" : ""}
+              title="${title}"
+            >${formatTime12h(slot.time)}</button>
+          `;
+        })
+        .join("") + (anyFree ? "" : `<p class="slots-empty">Todos los horarios de este dia estan ocupados.</p>`);
   }
 
   function renderCustomerForm() {
     $$("[data-field]", $("[data-customer-form]")).forEach((field) => {
-      const key = field.dataset.field;
-      field.value = draft[key] || "";
+      field.value = draft[field.dataset.field] || "";
     });
   }
 
-  function buildSummaryHtml() {
-    const service = findService(draft.serviceId);
-    const barber = findBarber(draft.barberId);
-    if (!service || !barber || !draft.date || !draft.time) return "";
-
+  function summaryHtml({ serviceName, price, durationMinutes, barberName, date, time, customerName, customerPhone, notes }) {
     return `
       <dl>
-        <div><dt>Servicio</dt><dd>${escapeHtml(service.name)} · ${formatMoneyCOP(service.price)}</dd></div>
-        <div><dt>Barbero</dt><dd>${escapeHtml(barber.name)}</dd></div>
-        <div><dt>Fecha</dt><dd>${escapeHtml(formatDateLong(draft.date))}</dd></div>
-        <div><dt>Hora</dt><dd>${escapeHtml(formatTime12h(draft.time))} (${service.durationMinutes} min)</dd></div>
-        <div><dt>Nombre</dt><dd>${escapeHtml(draft.customerName)}</dd></div>
-        <div><dt>Telefono</dt><dd>${escapeHtml(draft.customerPhone)}</dd></div>
-        ${draft.notes ? `<div><dt>Notas</dt><dd>${escapeHtml(draft.notes)}</dd></div>` : ""}
+        <div><dt>Servicio</dt><dd>${escapeHtml(serviceName)} · ${formatMoneyCOP(price)}</dd></div>
+        <div><dt>Barbero</dt><dd>${escapeHtml(barberName)}</dd></div>
+        <div><dt>Fecha</dt><dd>${escapeHtml(formatDateLong(date))}</dd></div>
+        <div><dt>Hora</dt><dd>${escapeHtml(formatTime12h(time))} (${durationMinutes} min)</dd></div>
+        <div><dt>Nombre</dt><dd>${escapeHtml(customerName)}</dd></div>
+        <div><dt>Telefono</dt><dd>${escapeHtml(customerPhone)}</dd></div>
+        ${notes ? `<div><dt>Notas</dt><dd>${escapeHtml(notes)}</dd></div>` : ""}
       </dl>
     `;
   }
 
   function renderConfirm() {
-    const summary = $("[data-summary]");
-    if (summary) summary.innerHTML = buildSummaryHtml();
-    const error = $("[data-booking-error]");
-    if (error) {
-      error.hidden = true;
-      error.textContent = "";
+    const service = findService(draft.serviceId);
+    const barber = findBarber(draft.barberId);
+    $("[data-booking-error]").hidden = true;
+    if (!service || !barber || !draft.date || !draft.time) {
+      $("[data-summary]").innerHTML = `<p class="slots-empty">Falta informacion. Vuelve a los pasos anteriores.</p>`;
+      return;
     }
+    $("[data-summary]").innerHTML = summaryHtml({
+      serviceName: service.name,
+      price: service.price,
+      durationMinutes: service.durationMinutes,
+      barberName: barber.name,
+      date: draft.date,
+      time: draft.time,
+      customerName: draft.customerName,
+      customerPhone: draft.customerPhone,
+      notes: draft.notes,
+    });
   }
 
   function renderPanel() {
     STEPS.forEach((step, index) => {
-      const panel = $(`[data-panel="${step}"]`);
-      if (panel) panel.hidden = index !== stepIndex;
+      $(`[data-panel="${step}"]`).hidden = index !== stepIndex;
     });
 
     const current = STEPS[stepIndex];
@@ -275,30 +329,24 @@
   function canContinue() {
     switch (STEPS[stepIndex]) {
       case "service":
-        return Boolean(draft.serviceId);
+        return Boolean(findService(draft.serviceId));
       case "barber":
-        return Boolean(draft.barberId);
+        return barberDoesService(draft.barberId, draft.serviceId);
       case "datetime":
         return Boolean(draft.date && draft.time);
       case "customer":
-        return draft.customerName.trim().length > 1 && draft.customerPhone.replace(/\D/g, "").length >= 7;
+        return draft.customerName.trim().length > 1 && utils.digitsOnly(draft.customerPhone).length >= 7;
       default:
         return true;
     }
   }
 
   function renderActions() {
-    const backButton = $("[data-step-back]");
-    const nextButton = $("[data-step-next]");
-    const confirmButton = $("[data-step-confirm]");
-
-    if (backButton) backButton.hidden = stepIndex === 0;
-
     const isConfirmStep = STEPS[stepIndex] === "confirm";
-    if (nextButton) nextButton.hidden = isConfirmStep;
-    if (confirmButton) confirmButton.hidden = !isConfirmStep;
-
-    if (nextButton) nextButton.disabled = !canContinue();
+    $("[data-step-back]").hidden = stepIndex === 0;
+    $("[data-step-next]").hidden = isConfirmStep;
+    $("[data-step-confirm]").hidden = !isConfirmStep;
+    $("[data-step-next]").disabled = !canContinue();
   }
 
   function goToStep(index) {
@@ -307,79 +355,65 @@
     renderPanel();
   }
 
-  function handleNext() {
-    if (!canContinue()) return;
-    goToStep(stepIndex + 1);
+  function selectedMonthFor(iso) {
+    return startOfMonth(parseISODate(iso));
   }
 
-  function handleBack() {
-    goToStep(stepIndex - 1);
-  }
+  // ---------- Confirmacion ----------
 
   function handleConfirm() {
-    const service = findService(draft.serviceId);
-    const barber = findBarber(draft.barberId);
-    const error = $("[data-booking-error]");
-
-    if (!service || !barber || !draft.date || !draft.time) {
-      if (error) {
-        error.textContent = "Falta informacion para confirmar la cita.";
-        error.hidden = false;
-      }
-      return;
-    }
-
     try {
       const booking = store.createBooking({
-        serviceId: service.id,
-        barberId: barber.id,
+        serviceId: draft.serviceId,
+        barberId: draft.barberId,
         date: draft.date,
         time: draft.time,
-        durationMinutes: service.durationMinutes,
-        customerName: draft.customerName.trim(),
-        customerPhone: draft.customerPhone.trim(),
-        notes: draft.notes.trim(),
+        customerName: draft.customerName,
+        customerPhone: draft.customerPhone,
+        notes: draft.notes,
       });
-      lastBooking = booking;
-      showSuccess(service, barber, booking);
-    } catch (submitError) {
-      if (error) {
-        error.textContent = submitError.message;
-        error.hidden = false;
-      }
-      renderSlots();
+      showSuccess(booking);
+    } catch (error) {
+      $("[data-booking-error-text]").textContent = error.message;
+      $("[data-booking-error]").hidden = false;
     }
   }
 
-  function showSuccess(service, barber, booking) {
+  function showSuccess(booking) {
+    completed = true;
     $$("[data-panel]").forEach((panel) => {
       panel.hidden = panel.dataset.panel !== "success";
     });
+    $("[data-booking-steps]").hidden = true;
+    $("[data-booking-actions]").hidden = true;
 
-    const stepsList = $("[data-booking-steps]");
-    if (stepsList) stepsList.hidden = true;
+    $("[data-booking-code]").textContent = booking.code;
+    $("[data-manage-link]").href = `mi-cita.html?code=${encodeURIComponent(booking.code)}`;
+    $("[data-success-summary]").innerHTML = summaryHtml(booking);
 
-    const actions = $("[data-booking-actions]");
-    if (actions) actions.hidden = true;
+    const message = `Hola, acabo de reservar una cita (codigo ${booking.code}): ${booking.serviceName} con ${booking.barberName} el ${formatDateLong(booking.date)} a las ${formatTime12h(booking.time)}. Mi nombre es ${booking.customerName}.`;
+    $("[data-whatsapp-notice]").href = whatsAppLink(data.business.whatsapp, message);
 
-    const summary = $("[data-success-summary]");
-    if (summary) summary.innerHTML = buildSummaryHtml();
-
-    const whatsappLink = $("[data-whatsapp-notice]");
-    if (whatsappLink && data.business) {
-      const message = `Hola, acabo de agendar una cita: ${service.name} con ${barber.name} el ${formatDateLong(draft.date)} a las ${formatTime12h(draft.time)}. Mi nombre es ${draft.customerName}.`;
-      const phone = data.business.whatsapp.replace(/\D/g, "");
-      whatsappLink.href = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
+
+  // ---------- Eventos ----------
 
   function wireEvents() {
     document.addEventListener("click", (event) => {
       const serviceOption = event.target.closest("[data-service-option]");
       if (serviceOption) {
         draft.serviceId = serviceOption.dataset.serviceOption;
+        if (draft.barberId && !barberDoesService(draft.barberId, draft.serviceId)) draft.barberId = null;
         draft.date = null;
         draft.time = null;
+        renderServiceOptions();
+        renderActions();
+        return;
+      }
+
+      if (event.target.closest("[data-clear-barber]")) {
+        draft.barberId = null;
         renderServiceOptions();
         renderActions();
         return;
@@ -426,17 +460,24 @@
       }
 
       if (event.target.closest("[data-step-next]")) {
-        handleNext();
+        if (canContinue()) goToStep(stepIndex + 1);
         return;
       }
 
       if (event.target.closest("[data-step-back]")) {
-        handleBack();
+        goToStep(stepIndex - 1);
         return;
       }
 
       if (event.target.closest("[data-step-confirm]")) {
         handleConfirm();
+        return;
+      }
+
+      if (event.target.closest("[data-pick-another-time]")) {
+        draft.time = null;
+        if (draft.date) calendarMonth = selectedMonthFor(draft.date);
+        goToStep(STEPS.indexOf("datetime"));
         return;
       }
 
@@ -447,16 +488,27 @@
       }
     });
 
-    const form = $("[data-customer-form]");
-    if (form) {
-      form.addEventListener("input", (event) => {
-        const field = event.target.closest("[data-field]");
-        if (!field) return;
-        draft[field.dataset.field] = field.value;
-        renderActions();
-      });
-    }
+    $("[data-customer-form]").addEventListener("input", (event) => {
+      const field = event.target.closest("[data-field]");
+      if (!field) return;
+      draft[field.dataset.field] = field.value;
+      renderActions();
+    });
   }
+
+  store.subscribe((nextState, meta) => {
+    if (meta.source !== "external" || completed) return;
+    data = nextState;
+    setBrand();
+    const current = STEPS[stepIndex];
+    if (current === "service") renderServiceOptions();
+    if (current === "barber") renderBarberOptions();
+    if (current === "datetime") {
+      renderCalendar();
+      renderSlots();
+    }
+    renderActions();
+  });
 
   setBrand();
   applyQueryParams();
