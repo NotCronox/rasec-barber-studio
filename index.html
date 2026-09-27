@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Web publica profesional para una barberia: inicio, servicios, barberos, informacion y horarios."
+    />
+    <title>Rasec Barber Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:wght@700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./src/styles.css" />
+    <script src="./src/data.js" defer></script>
+    <script src="./src/utils.js" defer></script>
+    <script src="./src/store.js" defer></script>
+    <script src="./src/app.js" defer></script>
+  </head>
+  <body>
+    <header class="site-header" data-header>
+      <a class="brand" href="#inicio" aria-label="Ir al inicio">
+        <span class="brand__mark" data-brand-mark>RB</span>
+        <span>
+          <strong data-business-name>Rasec Barber Studio</strong>
+          <small data-business-subtitle>Barberia premium</small>
+        </span>
+      </a>
+
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="primary-nav" data-menu-toggle>
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+
+      <nav class="primary-nav" id="primary-nav" data-primary-nav aria-label="Navegacion principal">
+        <a href="#inicio">Inicio</a>
+        <a href="#servicios">Servicios</a>
+        <a href="#barberos">Barberos</a>
+        <a href="#info">Informacion</a>
+        <a href="#horarios">Horarios</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero" id="inicio" aria-labelledby="hero-title">
+        <picture class="hero__media">
+          <img
+            src="https://images.pexels.com/photos/30547746/pexels-photo-30547746.jpeg?auto=compress&cs=tinysrgb&w=1800"
+            alt=""
+            data-hero-image
+          />
+        </picture>
+        <div class="hero__overlay"></div>
+        <div class="hero__content">
+          <p class="eyebrow" data-hero-eyebrow>Barberia profesional</p>
+          <h1 id="hero-title" data-hero-title>Tu estilo. Tu momento.</h1>
+          <p data-hero-text>
+            Cortes, barba y estilo personalizado en un espacio pensado para verte impecable.
+          </p>
+          <div class="hero__actions">
+            <a class="button button--primary" href="reserva.html" data-main-cta>Reservar cita</a>
+            <a class="button button--ghost" href="#servicios">Ver servicios</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="quick-facts" aria-label="Datos destacados" data-highlights></section>
+
+      <section class="section section--intro" aria-labelledby="intro-title">
+        <div class="section__heading">
+          <p class="eyebrow">La experiencia</p>
+          <h2 id="intro-title" data-intro-title>Cortes precisos en un ambiente tranquilo.</h2>
+        </div>
+        <div class="intro-grid">
+          <p data-intro-text>
+            Un sitio sobrio, moderno y reutilizable para presentar servicios, equipo, horarios y contacto.
+          </p>
+          <div class="signature-strip" data-promise-list></div>
+        </div>
+      </section>
+
+      <section class="section" id="servicios" aria-labelledby="services-title">
+        <div class="section__heading section__heading--wide">
+          <div>
+            <p class="eyebrow">Servicios</p>
+            <h2 id="services-title">Elige tu proximo look.</h2>
+          </div>
+          <p>
+            Opciones pensadas para mantener tu estilo limpio, comodo y listo para la semana.
+          </p>
+        </div>
+        <div class="card-grid card-grid--services" data-services></div>
+      </section>
+
+      <section class="section section--band" id="barberos" aria-labelledby="barbers-title">
+        <div class="section__heading section__heading--wide">
+          <div>
+            <p class="eyebrow">Equipo</p>
+            <h2 id="barbers-title">Barberos con estilo propio.</h2>
+          </div>
+          <p>
+            Tecnica, criterio y una conversacion clara antes de empezar cada servicio.
+          </p>
+        </div>
+        <div class="card-grid card-grid--barbers" data-barbers></div>
+      </section>
+
+      <section class="section info-section" id="info" aria-labelledby="info-title">
+        <div class="section__heading">
+          <p class="eyebrow">Informacion</p>
+          <h2 id="info-title">Todo listo antes de llegar.</h2>
+        </div>
+        <div class="info-layout">
+          <div class="info-card">
+            <div class="info-card__list" data-info-panel></div>
+            <a class="button button--small info-card__link" data-maps-link target="_blank" rel="noopener">
+              Abrir en Google Maps
+            </a>
+          </div>
+          <div class="map-panel">
+            <iframe
+              class="map-panel__frame"
+              data-map-frame
+              title="Ubicacion en el mapa"
+              loading="lazy"
+              referrerpolicy="no-referrer-when-downgrade"
+            ></iframe>
+          </div>
+        </div>
+      </section>
+
+      <section class="section schedule-section" id="horarios" aria-labelledby="hours-title">
+        <div class="section__heading">
+          <p class="eyebrow">Horarios</p>
+          <h2 id="hours-title">Atencion durante la semana.</h2>
+        </div>
+        <div class="schedule-layout">
+          <div class="hours-list" data-hours></div>
+          <aside class="note-panel" data-note-panel></aside>
+        </div>
+      </section>
+
+      <section class="reservation-cta" id="reserva" aria-labelledby="reserve-title">
+        <div>
+          <p class="eyebrow">Reserva</p>
+          <h2 id="reserve-title" data-cta-title>Agenda tu cita con Rasec Barber Studio.</h2>
+          <p data-cta-text>Elige tu barbero, el dia y la hora en menos de un minuto.</p>
+        </div>
+        <div class="reservation-cta__actions">
+          <a class="button button--primary" href="reserva.html">Agendar cita</a>
+          <a class="button button--outline" href="#horarios">Ver horarios</a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div>
+        <strong data-footer-brand>Rasec Barber Studio</strong>
+        <p data-footer-copy>Proyecto #02 de Rasec Dev.</p>
+      </div>
+      <div class="site-footer__links">
+        <a href="#inicio">Volver arriba</a>
+        <a href="admin.html" class="site-footer__admin-link">Panel administrativo</a>
+      </div>
+    </footer>
+
+    <div class="gallery-modal" data-gallery-modal aria-hidden="true">
+      <div class="gallery-modal__backdrop" data-gallery-close></div>
+      <div class="gallery-modal__panel" role="dialog" aria-modal="true" aria-labelledby="gallery-modal-title">
+        <header class="gallery-modal__header">
+          <h3 id="gallery-modal-title" data-gallery-title></h3>
+          <button type="button" class="gallery-modal__close" data-gallery-close aria-label="Cerrar galeria">
+            &times;
+          </button>
+        </header>
+        <div class="gallery-modal__grid" data-gallery-grid></div>
+      </div>
+    </div>
+  </body>
+</html>

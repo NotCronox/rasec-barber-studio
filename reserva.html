@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Agenda tu cita en Rasec Barber Studio: elige servicio, barbero, dia y hora." />
+    <title>Reservar cita · Rasec Barber Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:wght@700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./src/styles.css" />
+    <script src="./src/data.js" defer></script>
+    <script src="./src/utils.js" defer></script>
+    <script src="./src/store.js" defer></script>
+    <script src="./src/booking.js" defer></script>
+  </head>
+  <body class="utility-body">
+    <header class="utility-header">
+      <a class="utility-header__brand" href="index.html">
+        <span class="utility-header__mark" data-brand-mark>RB</span>
+        <span>
+          <strong data-business-name>Rasec Barber Studio</strong>
+          <small>Agenda tu cita</small>
+        </span>
+      </a>
+      <a class="utility-header__back" href="index.html">&larr; Volver al inicio</a>
+    </header>
+
+    <main class="booking">
+      <section class="booking-hero">
+        <p class="eyebrow">Reserva</p>
+        <h1>Agenda tu cita</h1>
+        <p>Elige el servicio, el barbero, el dia y la hora. Tu cupo queda confirmado al instante.</p>
+      </section>
+
+      <div class="booking-card">
+        <ol class="booking-steps" data-booking-steps>
+          <li data-step-indicator="service"><span>1</span>Servicio</li>
+          <li data-step-indicator="barber"><span>2</span>Barbero</li>
+          <li data-step-indicator="datetime"><span>3</span>Fecha y hora</li>
+          <li data-step-indicator="customer"><span>4</span>Tus datos</li>
+          <li data-step-indicator="confirm"><span>5</span>Confirmar</li>
+        </ol>
+
+        <div class="booking-panel" data-panel="service">
+          <h2>Elige un servicio</h2>
+          <div class="booking-options" data-service-options></div>
+        </div>
+
+        <div class="booking-panel" data-panel="barber" hidden>
+          <h2>Elige tu barbero</h2>
+          <div class="booking-options booking-options--barbers" data-barber-options></div>
+        </div>
+
+        <div class="booking-panel" data-panel="datetime" hidden>
+          <h2>Elige el dia y la hora</h2>
+          <div class="booking-datetime">
+            <div class="calendar">
+              <div class="calendar__header">
+                <button type="button" class="calendar__nav" data-calendar-prev aria-label="Mes anterior">&lsaquo;</button>
+                <strong data-calendar-label></strong>
+                <button type="button" class="calendar__nav" data-calendar-next aria-label="Mes siguiente">&rsaquo;</button>
+              </div>
+              <div class="calendar__weekdays">
+                <span>Lu</span><span>Ma</span><span>Mi</span><span>Ju</span><span>Vi</span><span>Sa</span><span>Do</span>
+              </div>
+              <div class="calendar__grid" data-calendar-grid></div>
+            </div>
+            <div class="slots">
+              <h3>Horarios disponibles</h3>
+              <div class="slots__grid" data-slots></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="booking-panel" data-panel="customer" hidden>
+          <h2>Tus datos</h2>
+          <form class="booking-form" data-customer-form>
+            <label>
+              Nombre completo
+              <input type="text" data-field="customerName" autocomplete="name" required />
+            </label>
+            <label>
+              Telefono / WhatsApp
+              <input type="tel" data-field="customerPhone" autocomplete="tel" required />
+            </label>
+            <label>
+              Notas (opcional)
+              <textarea data-field="notes" rows="3" placeholder="Ej: quiero el fade bien marcado a los lados"></textarea>
+            </label>
+          </form>
+        </div>
+
+        <div class="booking-panel" data-panel="confirm" hidden>
+          <h2>Confirma tu cita</h2>
+          <div class="booking-summary" data-summary></div>
+          <p class="booking-error" data-booking-error hidden></p>
+        </div>
+
+        <div class="booking-panel booking-panel--success" data-panel="success" hidden>
+          <h2>Cita confirmada</h2>
+          <div class="booking-summary" data-success-summary></div>
+          <div class="booking-success__actions">
+            <a class="button button--outline-dark" data-whatsapp-notice target="_blank" rel="noopener">
+              Avisar por WhatsApp (opcional)
+            </a>
+            <a class="button button--primary" href="index.html">Volver al inicio</a>
+          </div>
+        </div>
+
+        <div class="booking-actions" data-booking-actions>
+          <button type="button" class="button button--outline-dark" data-step-back hidden>Atras</button>
+          <button type="button" class="button button--primary" data-step-next disabled>Continuar</button>
+          <button type="button" class="button button--primary" data-step-confirm hidden>Confirmar reserva</button>
+        </div>
+      </div>
+    </main>
+  </body>
+</html>
