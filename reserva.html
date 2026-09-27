@@ -14,6 +14,11 @@
     <link rel="stylesheet" href="./src/styles.css" />
     <script src="./src/data.js" defer></script>
     <script src="./src/utils.js" defer></script>
+    <script src="./src/supabase-config.js" defer></script>
+    <script src="./src/supabase.js" defer></script>
+    <script src="./src/rules.js" defer></script>
+    <script src="./src/store-local.js" defer></script>
+    <script src="./src/store-remote.js" defer></script>
     <script src="./src/store.js" defer></script>
     <script src="./src/booking.js" defer></script>
   </head>
@@ -49,7 +54,9 @@
         <div class="booking-panel" data-panel="service">
           <h2>Elige un servicio</h2>
           <p class="booking-note" data-service-note hidden></p>
-          <div class="booking-options" data-service-options></div>
+          <div class="booking-options" data-service-options>
+            <p class="slots-empty">Cargando servicios...</p>
+          </div>
         </div>
 
         <div class="booking-panel" data-panel="barber" hidden>

@@ -6,7 +6,7 @@
 
   const { escapeHtml, formatMoneyCOP, formatHourRange, whatsAppLink } = utils;
 
-  let data = store.getState();
+  let data = null;
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
@@ -286,12 +286,29 @@
     renderCta();
   }
 
-  renderAll();
+  function showLoadError() {
+    const message = `<p class="load-error">No pudimos cargar esta seccion. Revisa tu conexion y recarga la pagina.</p>`;
+    ["[data-services]", "[data-barbers]", "[data-hours]"].forEach((selector) => {
+      const container = $(selector);
+      if (container) container.innerHTML = message;
+    });
+  }
+
   setupNavigation();
   setupGalleryEvents();
 
-  store.subscribe((nextState) => {
-    data = nextState;
-    renderAll();
-  });
+  store
+    .init({ bookings: false })
+    .then(() => {
+      data = store.getState();
+      renderAll();
+      store.subscribe((nextState) => {
+        data = nextState;
+        renderAll();
+      });
+    })
+    .catch((error) => {
+      console.error(error);
+      showLoadError();
+    });
 })();

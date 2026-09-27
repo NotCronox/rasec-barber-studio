@@ -61,36 +61,65 @@
     $("[data-rebook]").hidden = canCancel;
   }
 
-  function handleLookup(event) {
+  async function withBusy(button, busyLabel, action) {
+    const label = button.textContent;
+    button.disabled = true;
+    button.textContent = busyLabel;
+    try {
+      await action();
+    } finally {
+      button.disabled = false;
+      button.textContent = label;
+    }
+  }
+
+  async function handleLookup(event) {
     event.preventDefault();
     const code = $("[data-lookup-code]").value;
     const phone = $("[data-lookup-phone]").value;
-    const booking = store.findBookingByCode(code, phone);
 
-    if (!booking) {
-      lookup = null;
-      $("[data-lookup-result]").hidden = true;
-      showError("No encontramos una cita con ese codigo y telefono. Revisa que esten bien escritos.");
-      return;
-    }
+    await withBusy($("[data-lookup-form] button[type=submit]"), "Buscando...", async () => {
+      let booking = null;
+      try {
+        booking = await store.findBookingByCode(code, phone);
+      } catch (error) {
+        showError(error.message);
+        return;
+      }
 
-    lookup = { code, phone };
-    showError("");
-    renderResult(booking);
+      if (!booking) {
+        lookup = null;
+        $("[data-lookup-result]").hidden = true;
+        showError("No encontramos una cita con ese codigo y telefono. Revisa que esten bien escritos.");
+        return;
+      }
+
+      lookup = { code, phone };
+      showError("");
+      renderResult(booking);
+    });
   }
 
-  function handleCancel() {
+  async function handleCancel() {
     if (!lookup) return;
-    try {
-      store.cancelBookingByCustomer(lookup.code, lookup.phone);
-      renderResult(store.findBookingByCode(lookup.code, lookup.phone));
-    } catch (error) {
-      showError(error.message);
-    }
+    await withBusy($("[data-cancel-yes]"), "Cancelando...", async () => {
+      try {
+        renderResult(await store.cancelBookingByCustomer(lookup.code, lookup.phone));
+      } catch (error) {
+        showError(error.message);
+      }
+    });
   }
 
-  function init() {
-    setBrand();
+  async function init() {
+    try {
+      await store.init({ bookings: false });
+      setBrand();
+    } catch (error) {
+      console.error(error);
+      showError("No pudimos conectar con la agenda. Revisa tu conexion y recarga la pagina.");
+    }
+
     const code = new URLSearchParams(location.search).get("code");
     if (code) {
       $("[data-lookup-code]").value = code;
@@ -108,9 +137,9 @@
     });
     $("[data-cancel-yes]").addEventListener("click", handleCancel);
 
-    store.subscribe((nextState, meta) => {
+    store.subscribe(async (nextState, meta) => {
       if (meta.source !== "external" || !lookup) return;
-      const booking = store.findBookingByCode(lookup.code, lookup.phone);
+      const booking = await store.findBookingByCode(lookup.code, lookup.phone).catch(() => null);
       if (booking) renderResult(booking);
     });
   }

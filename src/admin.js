@@ -29,7 +29,7 @@
   const AGENDA_ROW_MINUTES = 15;
   const AGENDA_ROW_PX = 20;
 
-  let data = store.getState();
+  let data = null;
   let activeTab = "resumen";
   let agendaDate = todayISO();
   let confirmResolver = null;
@@ -93,15 +93,29 @@
     }, type === "error" ? 4500 : 2500);
   }
 
-  function attempt(action, successMessage) {
+  async function attempt(action, successMessage) {
     try {
-      const result = action();
+      const result = await action();
       data = store.getState();
       if (successMessage) toast(successMessage);
       return { ok: true, result };
     } catch (error) {
       toast(error.message, "error");
       return { ok: false };
+    }
+  }
+
+  // Deshabilita un boton mientras corre una operacion (evita dobles envios).
+  async function withBusy(button, busyLabel, action) {
+    if (!button) return action();
+    const label = button.textContent;
+    button.disabled = true;
+    button.textContent = busyLabel;
+    try {
+      return await action();
+    } finally {
+      button.disabled = false;
+      button.textContent = label;
     }
   }
 
@@ -200,7 +214,7 @@
         canvas.height = Math.round(img.height * scale);
         canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
         URL.revokeObjectURL(url);
-        resolve(canvas.toDataURL("image/jpeg", quality));
+        canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("No se pudo procesar la foto."))), "image/jpeg", quality);
       };
       img.onerror = () => {
         URL.revokeObjectURL(url);
@@ -224,13 +238,14 @@
       return;
     }
 
-    if (status) status.textContent = "Procesando foto...";
+    if (status) status.textContent = "Subiendo foto...";
     try {
-      const dataUrl = await compressImage(file);
-      target.value = dataUrl;
-      preview.src = dataUrl;
+      const blob = await compressImage(file);
+      const url = await store.uploadImage(blob);
+      target.value = url;
+      preview.src = url;
       preview.hidden = false;
-      if (status) status.textContent = `Foto subida desde tu equipo (${formatBytes(dataUrl.length)}).`;
+      if (status) status.textContent = `Foto subida (${formatBytes(blob.size)}). Recuerda guardar.`;
     } catch (error) {
       if (status) status.textContent = "";
       toast(error.message, "error");
@@ -247,33 +262,46 @@
     $("[data-brand-mark]").textContent = data.business.initials;
   }
 
-  function showLogin() {
+  function showLogin(message = "") {
     $("[data-admin-login]").hidden = false;
     $("[data-admin-shell]").hidden = true;
-    $("[data-login-hint]").hidden = auth.hasCustomPassword();
+    $("[data-login-email-field]").hidden = !auth.requiresEmail;
+    $("[data-login-email]").required = auth.requiresEmail;
+    $("[data-login-hint]").hidden = auth.mode !== "local" || auth.hasCustomPassword();
+    const error = $("[data-login-error]");
+    error.textContent = message;
+    error.hidden = !message;
   }
 
-  function showShell() {
+  // Carga los datos del panel (con Supabase, incluye todas las reservas) y lo muestra.
+  async function showShell() {
+    await store.init({ scope: "admin" });
+    data = store.getState();
     $("[data-admin-login]").hidden = true;
     $("[data-admin-shell]").hidden = false;
-    data = store.getState();
     refreshBrand();
     switchTab("resumen");
   }
 
   function initLoginForm() {
-    $("[data-login-form]").addEventListener("submit", (event) => {
+    const form = $("[data-login-form]");
+    form.addEventListener("submit", async (event) => {
       event.preventDefault();
+      const emailField = $("[data-login-email]");
       const passwordField = $("[data-login-password]");
       const error = $("[data-login-error]");
-      if (auth.login(passwordField.value)) {
-        error.hidden = true;
-        passwordField.value = "";
-        showShell();
-      } else {
-        error.textContent = "Contrasena incorrecta.";
-        error.hidden = false;
-      }
+      error.hidden = true;
+
+      await withBusy($("button[type=submit]", form), "Entrando...", async () => {
+        try {
+          await auth.login(emailField.value, passwordField.value);
+          passwordField.value = "";
+          await showShell();
+        } catch (loginError) {
+          error.textContent = loginError.message;
+          error.hidden = false;
+        }
+      });
     });
   }
 
@@ -350,8 +378,13 @@
       ? `<ul class="admin-upcoming-list">${upcoming.slice(0, 6).map(upcomingItemHtml).join("")}</ul>`
       : `<p class="admin-empty">No hay citas proximas.</p>`;
 
-    const usage = store.getStorageUsage();
-    $("[data-storage-usage]").textContent = `Espacio usado por la demo: ${formatBytes(usage.usedBytes)} de aprox. ${formatBytes(usage.approxLimitBytes)}.`;
+    const isLocal = store.mode === "local";
+    $("[data-local-data]").hidden = !isLocal;
+    $("[data-remote-data]").hidden = isLocal;
+    if (isLocal) {
+      const usage = store.getStorageUsage();
+      $("[data-storage-usage]").textContent = `Espacio usado: ${formatBytes(usage.usedBytes)} de aprox. ${formatBytes(usage.approxLimitBytes)}.`;
+    }
   }
 
   // ==================================================================
@@ -574,7 +607,7 @@
       confirmLabel: "Eliminar",
     });
     if (!ok) return;
-    if (attempt(() => store.deleteBooking(id), "Cita eliminada").ok) {
+    if ((await attempt(() => store.deleteBooking(id), "Cita eliminada")).ok) {
       if (isModalOpen()) closeModal();
       refreshAfterChange();
     }
@@ -676,34 +709,36 @@
     timeSelect.value = (free.find((slot) => slot.time === wantedTime) || free[0]).time;
   }
 
-  function submitNewBooking(form) {
+  async function submitNewBooking(form) {
     const value = (key) => $(`[data-field="${key}"]`, form).value;
     if (!value("time")) {
       showModalError("Elige una hora disponible.");
       return;
     }
-    try {
-      const booking = store.createBooking(
-        {
-          customerName: value("customerName"),
-          customerPhone: value("customerPhone"),
-          barberId: value("barberId"),
-          serviceId: value("serviceId"),
-          date: value("date"),
-          time: value("time"),
-          notes: value("notes"),
-        },
-        { source: "admin", status: value("status"), allowPast: true, ignoreWindow: true }
-      );
-      closeModal();
-      toast(`Cita ${booking.code} creada`);
-      agendaDate = booking.date;
-      refreshAfterChange();
-    } catch (error) {
-      data = store.getState();
-      showModalError(error.message);
-      refreshNewBookingOptions(form);
-    }
+    await withBusy($("button[type=submit]", form), "Guardando...", async () => {
+      try {
+        const booking = await store.createBooking(
+          {
+            customerName: value("customerName"),
+            customerPhone: value("customerPhone"),
+            barberId: value("barberId"),
+            serviceId: value("serviceId"),
+            date: value("date"),
+            time: value("time"),
+            notes: value("notes"),
+          },
+          { source: "admin", status: value("status") }
+        );
+        closeModal();
+        toast(`Cita ${booking.code} creada`);
+        agendaDate = booking.date;
+        refreshAfterChange();
+      } catch (error) {
+        data = store.getState();
+        showModalError(error.message);
+        refreshNewBookingOptions(form);
+      }
+    });
   }
 
   // ==================================================================
@@ -833,7 +868,7 @@
           </div>
         </form>
       `,
-      onSubmit: (form) => {
+      onSubmit: async (form) => {
         const value = (key) => $(`[data-field="${key}"]`, form);
         const record = {
           ...(isEdit ? source : {}),
@@ -850,15 +885,17 @@
           available: value("available").checked,
           currency: "COP",
         };
-        try {
-          store.saveService(record);
-          data = store.getState();
-          closeModal();
-          toast(isEdit ? "Servicio actualizado" : "Servicio agregado");
-          renderServicesTable();
-        } catch (error) {
-          showModalError(error.message);
-        }
+        await withBusy($("button[type=submit]", form), "Guardando...", async () => {
+          try {
+            await store.saveService(record);
+            data = store.getState();
+            closeModal();
+            toast(isEdit ? "Servicio actualizado" : "Servicio agregado");
+            renderServicesTable();
+          } catch (error) {
+            showModalError(error.message);
+          }
+        });
       },
     });
   }
@@ -871,7 +908,7 @@
       ? `"${service.name}" tiene ${pluralize(upcoming, "cita futura", "citas futuras")}. Las citas se conservan, pero el servicio desaparecera del sitio. Si solo quieres dejar de ofrecerlo por un tiempo, es mejor pausarlo.`
       : `Se eliminara "${service.name}" del sitio y de los barberos que lo ofrecen.`;
     const ok = await confirmDialog({ title: "Eliminar servicio", message, confirmLabel: "Eliminar" });
-    if (ok && attempt(() => store.deleteService(id), "Servicio eliminado").ok) renderServicesTable();
+    if (ok && (await attempt(() => store.deleteService(id), "Servicio eliminado")).ok) renderServicesTable();
   }
 
   // ==================================================================
@@ -1062,15 +1099,17 @@
           if (!ok) return;
         }
 
-        try {
-          store.saveBarber(record);
-          data = store.getState();
-          closeModal();
-          toast(isEdit ? "Barbero actualizado" : "Barbero agregado");
-          renderBarbersTable();
-        } catch (error) {
-          showModalError(error.message);
-        }
+        await withBusy($("button[type=submit]", form), "Guardando...", async () => {
+          try {
+            await store.saveBarber(record);
+            data = store.getState();
+            closeModal();
+            toast(isEdit ? "Barbero actualizado" : "Barbero agregado");
+            renderBarbersTable();
+          } catch (error) {
+            showModalError(error.message);
+          }
+        });
       },
     });
   }
@@ -1083,7 +1122,7 @@
       ? `${barber.name} tiene ${pluralize(upcoming, "cita futura", "citas futuras")}. Las citas se conservan, pero ya no podras reasignarlas facilmente. Si solo no va a atender por un tiempo, es mejor pausarlo o agregarle una ausencia.`
       : `Se eliminara a ${barber.name} del sitio y de la agenda.`;
     const ok = await confirmDialog({ title: "Eliminar barbero", message, confirmLabel: "Eliminar" });
-    if (ok && attempt(() => store.deleteBarber(id), "Barbero eliminado").ok) renderBarbersTable();
+    if (ok && (await attempt(() => store.deleteBarber(id), "Barbero eliminado")).ok) renderBarbersTable();
   }
 
   // ==================================================================
@@ -1137,10 +1176,12 @@
       if (!ok) return;
     }
 
-    attempt(() => {
-      store.updateSettings({ bookingWindowDays: windowDays });
-      store.saveHours(hours);
-    }, "Horarios guardados");
+    await withBusy($("[data-hours-form] button[type=submit]"), "Guardando...", () =>
+      attempt(async () => {
+        await store.updateSiteContent({ settings: { bookingWindowDays: windowDays } });
+        await store.saveHours(hours);
+      }, "Horarios guardados")
+    );
   }
 
   // ==================================================================
@@ -1188,7 +1229,7 @@
     });
   }
 
-  function handleBusinessSubmit(event) {
+  async function handleBusinessSubmit(event) {
     event.preventDefault();
     const form = event.target;
     const val = (key) => $(`[data-field="${key}"]`, form).value.trim();
@@ -1197,9 +1238,9 @@
       .map((index) => ({ value: val(`highlightValue${index}`), label: val(`highlightLabel${index}`) }))
       .filter((item) => item.value || item.label);
 
-    const result = attempt(() => {
-      store.updateMedia({ hero: val("heroImage") });
-      store.updateBusiness({
+    const sections = {
+      media: { hero: val("heroImage") },
+      business: {
         name: val("name"),
         shortName: val("shortName"),
         initials: val("initials"),
@@ -1213,25 +1254,28 @@
         neighborhood: val("neighborhood"),
         city: val("city"),
         mapQuery: val("mapQuery"),
-      });
-      store.updateIdentity({
+      },
+      identity: {
         concept: val("concept"),
         promise: val("promise")
           .split(",")
           .map((item) => item.trim())
           .filter(Boolean),
         highlights,
-      });
-      store.updateHero({
+      },
+      hero: {
         eyebrow: val("heroEyebrow"),
         title: val("heroTitle"),
         text: val("heroText"),
         primaryCta: val("heroPrimaryCta"),
-      });
-      store.updateNotes({ title: val("notesTitle"), body: val("notesBody") });
-      store.updateCta({ title: val("ctaTitle"), text: val("ctaText") });
-    }, "Cambios guardados. El sitio publico ya los muestra.");
+      },
+      notes: { title: val("notesTitle"), body: val("notesBody") },
+      cta: { title: val("ctaTitle"), text: val("ctaText") },
+    };
 
+    const result = await withBusy($("button[type=submit]", form), "Guardando...", () =>
+      attempt(() => store.updateSiteContent(sections), "Cambios guardados. El sitio publico ya los muestra.")
+    );
     if (result.ok) refreshBrand();
   }
 
@@ -1242,19 +1286,32 @@
   function resetPasswordForm() {
     $("[data-password-form]").reset();
     $("[data-password-error]").hidden = true;
+    const email = auth.currentEmail();
+    $("[data-account-email]").hidden = !email;
+    $("[data-account-email]").textContent = email ? `Sesion iniciada como ${email}.` : "";
   }
 
-  function handlePasswordSubmit(event) {
+  async function handlePasswordSubmit(event) {
     event.preventDefault();
     const current = $("[data-password-current]").value;
     const next = $("[data-password-new]").value;
     const repeat = $("[data-password-repeat]").value;
     const error = $("[data-password-error]");
+    error.hidden = true;
 
     let message = "";
     if (next.length < 6) message = "La nueva contrasena debe tener al menos 6 caracteres.";
     else if (next !== repeat) message = "Las contrasenas nuevas no coinciden.";
-    else if (!auth.changePassword(current, next)) message = "La contrasena actual no es correcta.";
+
+    if (!message) {
+      await withBusy($("[data-password-form] button[type=submit]"), "Actualizando...", async () => {
+        try {
+          await auth.changePassword(current, next);
+        } catch (changeError) {
+          message = changeError.message;
+        }
+      });
+    }
 
     if (message) {
       error.textContent = message;
@@ -1280,8 +1337,7 @@
     if (tabButton) return switchTab(tabButton.dataset.adminTab);
 
     if (target.closest("[data-admin-logout]")) {
-      auth.logout();
-      return showLogin();
+      return auth.logout().finally(() => showLogin());
     }
 
     if (target.closest("[data-new-booking]")) {
@@ -1352,11 +1408,17 @@
       confirmLabel: "Restaurar",
     });
     if (!ok) return;
-    store.resetToDefaults();
-    data = store.getState();
-    refreshBrand();
-    toast("Datos de ejemplo restaurados");
-    renderActiveTab();
+    if ((await attempt(() => store.resetToDefaults(), "Datos de ejemplo restaurados")).ok) {
+      refreshBrand();
+      renderActiveTab();
+    }
+  }
+
+  async function changeBookingStatus(id, status, reopenDetail) {
+    if ((await attempt(() => store.updateBookingStatus(id, status), "Estado actualizado")).ok) {
+      if (reopenDetail) openBookingDetail(id);
+    }
+    refreshAfterChange();
   }
 
   function handleGlobalChange(event) {
@@ -1375,18 +1437,12 @@
     }
 
     if (target.matches("[data-booking-status]")) {
-      if (attempt(() => store.updateBookingStatus(target.dataset.bookingStatus, target.value), "Estado actualizado").ok) {
-        refreshAfterChange();
-      }
+      changeBookingStatus(target.dataset.bookingStatus, target.value, false);
       return;
     }
 
     if (target.matches("[data-detail-status]")) {
-      const id = target.dataset.detailStatus;
-      if (attempt(() => store.updateBookingStatus(id, target.value), "Estado actualizado").ok) {
-        openBookingDetail(id);
-        refreshAfterChange();
-      }
+      changeBookingStatus(target.dataset.detailStatus, target.value, true);
       return;
     }
 
@@ -1455,9 +1511,21 @@
     refreshAfterChange();
   });
 
-  if (auth.isAuthenticated()) {
-    showShell();
-  } else {
+  auth.onSessionEnded(() => showLogin("Tu sesion termino. Vuelve a iniciar sesion."));
+
+  (async () => {
     showLogin();
-  }
+    $("[data-login-form]").hidden = true;
+    try {
+      if (await auth.isAuthenticated()) {
+        await showShell();
+        return;
+      }
+    } catch (error) {
+      console.error(error);
+      showLogin("No pudimos conectar con el servidor. Revisa tu conexion y recarga la pagina.");
+    } finally {
+      $("[data-login-form]").hidden = false;
+    }
+  })();
 })();
