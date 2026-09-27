@@ -33,7 +33,8 @@
       <section class="booking-hero">
         <p class="eyebrow">Reserva</p>
         <h1>Agenda tu cita</h1>
-        <p>Elige el servicio, el barbero, el dia y la hora. Tu cupo queda confirmado al instante.</p>
+        <p>Elige el servicio, el barbero, el dia y la hora. Tu cupo queda reservado al instante.</p>
+        <a class="booking-hero__manage" href="mi-cita.html">¿Ya tienes una cita? Consultala o cancelala &rarr;</a>
       </section>
 
       <div class="booking-card">
@@ -47,6 +48,7 @@
 
         <div class="booking-panel" data-panel="service">
           <h2>Elige un servicio</h2>
+          <p class="booking-note" data-service-note hidden></p>
           <div class="booking-options" data-service-options></div>
         </div>
 
@@ -68,6 +70,7 @@
                 <span>Lu</span><span>Ma</span><span>Mi</span><span>Ju</span><span>Vi</span><span>Sa</span><span>Do</span>
               </div>
               <div class="calendar__grid" data-calendar-grid></div>
+              <p class="calendar__hint" data-calendar-hint></p>
             </div>
             <div class="slots">
               <h3>Horarios disponibles</h3>
@@ -86,6 +89,7 @@
             <label>
               Telefono / WhatsApp
               <input type="tel" data-field="customerPhone" autocomplete="tel" required />
+              <small>Lo usaras junto con tu codigo para consultar o cancelar la cita.</small>
             </label>
             <label>
               Notas (opcional)
@@ -97,17 +101,28 @@
         <div class="booking-panel" data-panel="confirm" hidden>
           <h2>Confirma tu cita</h2>
           <div class="booking-summary" data-summary></div>
-          <p class="booking-error" data-booking-error hidden></p>
+          <div class="booking-error" data-booking-error hidden>
+            <p data-booking-error-text></p>
+            <button type="button" class="button button--small button--outline-dark" data-pick-another-time>
+              Elegir otro horario
+            </button>
+          </div>
         </div>
 
         <div class="booking-panel booking-panel--success" data-panel="success" hidden>
-          <h2>Cita confirmada</h2>
+          <h2>Cita reservada</h2>
+          <div class="booking-code">
+            <span>Tu codigo de reserva</span>
+            <strong data-booking-code></strong>
+            <small>Guardalo: con este codigo y tu telefono puedes consultar o cancelar la cita.</small>
+          </div>
           <div class="booking-summary" data-success-summary></div>
           <div class="booking-success__actions">
+            <a class="button button--primary" data-manage-link href="mi-cita.html">Ver o cancelar mi cita</a>
             <a class="button button--outline-dark" data-whatsapp-notice target="_blank" rel="noopener">
               Avisar por WhatsApp (opcional)
             </a>
-            <a class="button button--primary" href="index.html">Volver al inicio</a>
+            <a class="button button--outline-dark" href="reserva.html">Agendar otra cita</a>
           </div>
         </div>
 

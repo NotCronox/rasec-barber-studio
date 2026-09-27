@@ -4,7 +4,7 @@
 
   if (!store || !utils) return;
 
-  const { escapeHtml, formatMoneyCOP, formatHourRange } = utils;
+  const { escapeHtml, formatMoneyCOP, formatHourRange, whatsAppLink } = utils;
 
   let data = store.getState();
 
@@ -16,17 +16,16 @@
     if (node && text) node.textContent = text;
   }
 
-  function buildWhatsAppLink(message) {
-    const phone = data.business.whatsapp.replace(/\D/g, "");
-    return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-  }
-
   function buildMapEmbedUrl(query) {
     return `https://www.google.com/maps?q=${encodeURIComponent(query)}&output=embed`;
   }
 
   function buildMapsLink(query) {
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+  }
+
+  function isServiceBookable(service) {
+    return service.available && data.barbers.some((barber) => barber.available && barber.serviceIds.includes(service.id));
   }
 
   function createTagList(tags) {
@@ -80,8 +79,9 @@
     if (!container) return;
 
     container.innerHTML = data.services
-      .map(
-        (service) => `
+      .map((service) => {
+        const bookable = isServiceBookable(service);
+        return `
           <article class="service-card">
             <img src="${escapeHtml(service.image)}" alt="${escapeHtml(service.name)}" loading="lazy" />
             <div class="service-card__body">
@@ -90,8 +90,8 @@
                   <h3>${escapeHtml(service.name)}</h3>
                   <p>${escapeHtml(service.description)}</p>
                 </div>
-                <span class="status ${service.available ? "status--open" : "status--closed"}">
-                  ${service.available ? "Disponible" : "Pausado"}
+                <span class="status ${bookable ? "status--open" : "status--closed"}">
+                  ${bookable ? "Disponible" : "Pausado"}
                 </span>
               </div>
               <div class="tag-list">${createTagList(service.tags)}</div>
@@ -99,13 +99,15 @@
                 <strong>${formatMoneyCOP(service.price)}</strong>
                 <span>${service.durationMinutes} min</span>
               </div>
-              <a class="button button--small" href="reserva.html?service=${encodeURIComponent(service.id)}">
-                Reservar
-              </a>
+              ${
+                bookable
+                  ? `<a class="button button--small" href="reserva.html?service=${encodeURIComponent(service.id)}">Reservar</a>`
+                  : `<span class="button button--small button--disabled" aria-disabled="true">No disponible por ahora</span>`
+              }
             </div>
           </article>
-        `
-      )
+        `;
+      })
       .join("");
   }
 
@@ -125,12 +127,19 @@
               <h3>${escapeHtml(barber.name)}</h3>
               <p class="barber-card__specialty">${escapeHtml(barber.specialty)}</p>
               <p>${escapeHtml(barber.bio)}</p>
+              ${
+                barber.daysOff.length
+                  ? `<p class="barber-card__rest">Descansa: ${escapeHtml(barber.daysOff.join(", "))}</p>`
+                  : ""
+              }
               <div class="barber-card__actions">
-                <a class="button button--small button--light" href="reserva.html?barber=${encodeURIComponent(barber.id)}">
-                  Reservar
-                </a>
                 ${
-                  barber.gallery && barber.gallery.length
+                  barber.available
+                    ? `<a class="button button--small button--light" href="reserva.html?barber=${encodeURIComponent(barber.id)}">Reservar</a>`
+                    : ""
+                }
+                ${
+                  barber.gallery.length
                     ? `<button type="button" class="button button--small button--outline-light" data-open-gallery="${escapeHtml(barber.id)}">
                         Ver galeria
                       </button>`
@@ -144,43 +153,27 @@
       .join("");
   }
 
-  function setupGalleryModal() {
+  function openGallery(barberId) {
     const modal = $("[data-gallery-modal]");
-    const grid = $("[data-gallery-grid]");
-    const title = $("[data-gallery-title]");
-    if (!modal || !grid || !title) return;
+    const barber = data.barbers.find((item) => item.id === barberId);
+    if (!modal || !barber || !barber.gallery.length) return;
 
-    function openGallery(barberId) {
-      const barber = data.barbers.find((item) => item.id === barberId);
-      if (!barber || !barber.gallery || !barber.gallery.length) return;
+    $("[data-gallery-title]").textContent = `Trabajos de ${barber.name}`;
+    $("[data-gallery-grid]").innerHTML = barber.gallery
+      .map((item) => `<figure><img src="${escapeHtml(item.src)}" alt="${escapeHtml(item.alt)}" loading="lazy" /></figure>`)
+      .join("");
 
-      title.textContent = `Trabajos de ${barber.name}`;
-      grid.innerHTML = barber.gallery
-        .map((item) => `<figure><img src="${escapeHtml(item.src)}" alt="${escapeHtml(item.alt)}" loading="lazy" /></figure>`)
-        .join("");
+    modal.classList.add("is-open");
+    modal.setAttribute("aria-hidden", "false");
+    document.body.classList.add("no-scroll");
+  }
 
-      modal.classList.add("is-open");
-      modal.setAttribute("aria-hidden", "false");
-      document.body.classList.add("no-scroll");
-    }
-
-    function closeGallery() {
-      modal.classList.remove("is-open");
-      modal.setAttribute("aria-hidden", "true");
-      document.body.classList.remove("no-scroll");
-    }
-
-    $$("[data-open-gallery]").forEach((button) => {
-      button.addEventListener("click", () => openGallery(button.dataset.openGallery));
-    });
-
-    $$("[data-gallery-close]").forEach((element) => {
-      element.addEventListener("click", closeGallery);
-    });
-
-    document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") closeGallery();
-    });
+  function closeGallery() {
+    const modal = $("[data-gallery-modal]");
+    if (!modal) return;
+    modal.classList.remove("is-open");
+    modal.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("no-scroll");
   }
 
   function renderInfo() {
@@ -207,7 +200,8 @@
 
     const mapQuery = data.business.mapQuery || `${data.business.neighborhood}, ${data.business.city}, Colombia`;
     const mapFrame = $("[data-map-frame]");
-    if (mapFrame) mapFrame.src = buildMapEmbedUrl(mapQuery);
+    const embedUrl = buildMapEmbedUrl(mapQuery);
+    if (mapFrame && mapFrame.getAttribute("src") !== embedUrl) mapFrame.src = embedUrl;
 
     const mapsLink = $("[data-maps-link]");
     if (mapsLink) mapsLink.href = buildMapsLink(mapQuery);
@@ -233,7 +227,7 @@
       note.innerHTML = `
         <h3>${escapeHtml(data.notes.title)}</h3>
         <p>${escapeHtml(data.notes.body)}</p>
-        <a href="${buildWhatsAppLink(data.cta.whatsappMessage)}">${escapeHtml(data.business.phone)}</a>
+        <a href="${whatsAppLink(data.business.whatsapp, data.cta.whatsappMessage)}">${escapeHtml(data.business.phone)}</a>
       `;
     }
   }
@@ -265,6 +259,21 @@
     });
   }
 
+  function setupGalleryEvents() {
+    document.addEventListener("click", (event) => {
+      const opener = event.target.closest("[data-open-gallery]");
+      if (opener) {
+        openGallery(opener.dataset.openGallery);
+        return;
+      }
+      if (event.target.closest("[data-gallery-close]")) closeGallery();
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") closeGallery();
+    });
+  }
+
   function renderAll() {
     renderHeader();
     renderHero();
@@ -275,16 +284,14 @@
     renderInfo();
     renderHours();
     renderCta();
-    setupGalleryModal();
   }
 
   renderAll();
   setupNavigation();
+  setupGalleryEvents();
 
-  window.addEventListener("storage", (event) => {
-    if (event.key === store.STORAGE_KEY) {
-      data = store.getState();
-      renderAll();
-    }
+  store.subscribe((nextState) => {
+    data = nextState;
+    renderAll();
   });
 })();

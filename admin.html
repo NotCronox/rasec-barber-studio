@@ -23,14 +23,14 @@
       <form class="admin-login__card" data-login-form>
         <span class="utility-header__mark">RB</span>
         <h1>Panel administrativo</h1>
-        <p>Ingresa la contrasena para gestionar servicios, barberos, horarios y reservas.</p>
+        <p>Ingresa la contrasena para gestionar la agenda, los servicios, los barberos y el sitio.</p>
         <label>
           Contrasena
           <input type="password" data-login-password autocomplete="current-password" required />
         </label>
         <button type="submit" class="button button--primary">Entrar</button>
         <p class="admin-login__error" data-login-error hidden></p>
-        <p class="admin-login__hint">Demo local: contrasena por defecto <code>rasec2025</code>.</p>
+        <p class="admin-login__hint" data-login-hint>Demo local: contrasena por defecto <code>rasec2025</code>.</p>
       </form>
     </div>
 
@@ -46,11 +46,13 @@
 
         <nav class="admin-nav" data-admin-nav>
           <button type="button" data-admin-tab="resumen" class="is-active">Resumen</button>
-          <button type="button" data-admin-tab="negocio">Negocio</button>
+          <button type="button" data-admin-tab="agenda">Agenda</button>
+          <button type="button" data-admin-tab="reservas">Reservas</button>
           <button type="button" data-admin-tab="servicios">Servicios</button>
           <button type="button" data-admin-tab="barberos">Barberos</button>
           <button type="button" data-admin-tab="horarios">Horarios</button>
-          <button type="button" data-admin-tab="reservas">Reservas</button>
+          <button type="button" data-admin-tab="negocio">Sitio y negocio</button>
+          <button type="button" data-admin-tab="cuenta">Cuenta</button>
         </nav>
 
         <div class="admin-sidebar__footer">
@@ -60,11 +62,15 @@
       </aside>
 
       <main class="admin-main">
+        <!-- Resumen -->
         <section class="admin-panel" data-admin-panel="resumen">
-          <h1>Resumen</h1>
+          <div class="admin-panel__header">
+            <h1>Resumen</h1>
+            <button type="button" class="button button--primary" data-new-booking>Nueva cita</button>
+          </div>
           <div class="admin-stats" data-admin-stats></div>
           <div class="admin-block">
-            <h2>Proximas reservas</h2>
+            <h2>Proximas citas</h2>
             <div data-admin-upcoming></div>
           </div>
           <div class="admin-block admin-block--danger">
@@ -73,129 +79,45 @@
               Todo se guarda en este navegador (localStorage). Si algo se dano probando el panel, puedes
               restaurar los datos de ejemplo originales.
             </p>
+            <p class="admin-muted" data-storage-usage></p>
             <button type="button" class="button button--outline-dark" data-reset-demo>Restaurar datos de ejemplo</button>
           </div>
         </section>
 
-        <section class="admin-panel" data-admin-panel="negocio" hidden>
-          <h1>Negocio</h1>
-          <form class="admin-form" data-business-form>
-            <fieldset>
-              <legend>Identidad</legend>
-              <label>Nombre <input type="text" data-field="name" required /></label>
-              <label>Nombre corto <input type="text" data-field="shortName" /></label>
-              <label>Iniciales (logo) <input type="text" data-field="initials" maxlength="3" /></label>
-              <label>Subtitulo <input type="text" data-field="subtitle" /></label>
-              <label class="admin-form__full">Descripcion <textarea data-field="description" rows="2"></textarea></label>
-            </fieldset>
-
-            <fieldset>
-              <legend>Contacto y ubicacion</legend>
-              <label>Telefono <input type="text" data-field="phone" /></label>
-              <label>WhatsApp (solo numeros) <input type="text" data-field="whatsapp" /></label>
-              <label>Email <input type="email" data-field="email" /></label>
-              <label>Instagram <input type="text" data-field="instagram" /></label>
-              <label>Direccion <input type="text" data-field="address" /></label>
-              <label>Barrio / zona <input type="text" data-field="neighborhood" /></label>
-              <label>Ciudad <input type="text" data-field="city" /></label>
-              <label class="admin-form__full">
-                Texto de busqueda para el mapa
-                <input type="text" data-field="mapQuery" />
-              </label>
-            </fieldset>
-
-            <fieldset>
-              <legend>Portada (hero)</legend>
-              <label>Texto pequeno <input type="text" data-field="heroEyebrow" /></label>
-              <label>Titulo <input type="text" data-field="heroTitle" /></label>
-              <label class="admin-form__full">Texto <textarea data-field="heroText" rows="2"></textarea></label>
-              <label>Boton principal <input type="text" data-field="heroPrimaryCta" /></label>
-            </fieldset>
-
-            <fieldset>
-              <legend>Nota / recomendacion</legend>
-              <label>Titulo <input type="text" data-field="notesTitle" /></label>
-              <label class="admin-form__full">Texto <textarea data-field="notesBody" rows="2"></textarea></label>
-            </fieldset>
-
-            <fieldset>
-              <legend>CTA final</legend>
-              <label>Titulo <input type="text" data-field="ctaTitle" /></label>
-              <label class="admin-form__full">Texto <textarea data-field="ctaText" rows="2"></textarea></label>
-            </fieldset>
-
-            <div class="admin-form__actions">
-              <button type="submit" class="button button--primary">Guardar cambios</button>
-              <span class="admin-form__saved" data-business-saved hidden>Guardado.</span>
-            </div>
-          </form>
-        </section>
-
-        <section class="admin-panel" data-admin-panel="servicios" hidden>
+        <!-- Agenda -->
+        <section class="admin-panel" data-admin-panel="agenda" hidden>
           <div class="admin-panel__header">
-            <h1>Servicios</h1>
-            <button type="button" class="button button--primary" data-add-service>Agregar servicio</button>
+            <h1>Agenda</h1>
+            <button type="button" class="button button--primary" data-new-booking>Nueva cita</button>
           </div>
-          <div class="admin-table-wrap">
-            <table class="admin-table" data-services-table>
-              <thead>
-                <tr>
-                  <th>Servicio</th>
-                  <th>Precio</th>
-                  <th>Duracion</th>
-                  <th>Estado</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </section>
-
-        <section class="admin-panel" data-admin-panel="barberos" hidden>
-          <div class="admin-panel__header">
-            <h1>Barberos</h1>
-            <button type="button" class="button button--primary" data-add-barber>Agregar barbero</button>
-          </div>
-          <div class="admin-table-wrap">
-            <table class="admin-table" data-barbers-table>
-              <thead>
-                <tr>
-                  <th>Barbero</th>
-                  <th>Especialidad</th>
-                  <th>Fotos galeria</th>
-                  <th>Estado</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </section>
-
-        <section class="admin-panel" data-admin-panel="horarios" hidden>
-          <h1>Horarios</h1>
-          <form class="admin-table-wrap" data-hours-form>
-            <table class="admin-table">
-              <thead>
-                <tr>
-                  <th>Dia</th>
-                  <th>Abierto</th>
-                  <th>Desde</th>
-                  <th>Hasta</th>
-                </tr>
-              </thead>
-              <tbody data-hours-body></tbody>
-            </table>
-            <div class="admin-form__actions">
-              <button type="submit" class="button button--primary">Guardar horarios</button>
-              <span class="admin-form__saved" data-hours-saved hidden>Guardado.</span>
+          <div class="agenda-toolbar">
+            <div class="agenda-toolbar__nav">
+              <button type="button" class="calendar__nav" data-agenda-prev aria-label="Dia anterior">&lsaquo;</button>
+              <button type="button" class="button button--small button--outline-dark" data-agenda-today>Hoy</button>
+              <button type="button" class="calendar__nav" data-agenda-next aria-label="Dia siguiente">&rsaquo;</button>
+              <strong class="agenda-toolbar__label" data-agenda-label></strong>
             </div>
-          </form>
+            <label class="agenda-toolbar__jump">
+              Ir a
+              <input type="date" data-agenda-date />
+            </label>
+          </div>
+          <div class="agenda-week" data-agenda-week></div>
+          <div class="agenda-legend">
+            <span><i class="agenda-legend__dot agenda-legend__dot--pendiente"></i>Pendiente</span>
+            <span><i class="agenda-legend__dot agenda-legend__dot--confirmada"></i>Confirmada</span>
+            <span>Haz clic en un espacio libre para agendar, o en una cita para ver el detalle.</span>
+          </div>
+          <div class="agenda-wrap" data-agenda-body></div>
+          <div data-agenda-extra></div>
         </section>
 
+        <!-- Reservas -->
         <section class="admin-panel" data-admin-panel="reservas" hidden>
-          <h1>Reservas</h1>
+          <div class="admin-panel__header">
+            <h1>Reservas</h1>
+            <button type="button" class="button button--primary" data-new-booking>Nueva cita</button>
+          </div>
           <div class="admin-filters">
             <label>
               Barbero
@@ -216,11 +138,16 @@
               Desde
               <input type="date" data-filter-date />
             </label>
+            <label>
+              Buscar
+              <input type="search" data-filter-search placeholder="Nombre, telefono o codigo" />
+            </label>
           </div>
           <div class="admin-table-wrap">
             <table class="admin-table" data-bookings-table>
               <thead>
                 <tr>
+                  <th>Codigo</th>
                   <th>Fecha</th>
                   <th>Hora</th>
                   <th>Cliente</th>
@@ -233,6 +160,183 @@
               <tbody></tbody>
             </table>
           </div>
+        </section>
+
+        <!-- Servicios -->
+        <section class="admin-panel" data-admin-panel="servicios" hidden>
+          <div class="admin-panel__header">
+            <h1>Servicios</h1>
+            <button type="button" class="button button--primary" data-add-service>Agregar servicio</button>
+          </div>
+          <div class="admin-table-wrap">
+            <table class="admin-table" data-services-table>
+              <thead>
+                <tr>
+                  <th>Servicio</th>
+                  <th>Precio</th>
+                  <th>Duracion</th>
+                  <th>Barberos</th>
+                  <th>Estado</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Barberos -->
+        <section class="admin-panel" data-admin-panel="barberos" hidden>
+          <div class="admin-panel__header">
+            <h1>Barberos</h1>
+            <button type="button" class="button button--primary" data-add-barber>Agregar barbero</button>
+          </div>
+          <div class="admin-table-wrap">
+            <table class="admin-table" data-barbers-table>
+              <thead>
+                <tr>
+                  <th>Barbero</th>
+                  <th>Servicios</th>
+                  <th>Descanso</th>
+                  <th>Ausencias</th>
+                  <th>Galeria</th>
+                  <th>Estado</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Horarios -->
+        <section class="admin-panel" data-admin-panel="horarios" hidden>
+          <h1>Horarios</h1>
+          <form class="admin-form" data-hours-form>
+            <div class="admin-table-wrap">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>Dia</th>
+                    <th>Abierto</th>
+                    <th>Desde</th>
+                    <th>Hasta</th>
+                  </tr>
+                </thead>
+                <tbody data-hours-body></tbody>
+              </table>
+            </div>
+            <fieldset>
+              <legend>Reservas en linea</legend>
+              <label>
+                Los clientes pueden reservar hasta (dias adelante)
+                <input type="number" min="1" max="365" step="1" data-setting-window required />
+              </label>
+            </fieldset>
+            <div class="admin-form__actions">
+              <button type="submit" class="button button--primary">Guardar horarios</button>
+            </div>
+          </form>
+        </section>
+
+        <!-- Sitio y negocio -->
+        <section class="admin-panel" data-admin-panel="negocio" hidden>
+          <h1>Sitio y negocio</h1>
+          <form class="admin-form" data-business-form>
+            <fieldset>
+              <legend>Identidad</legend>
+              <label>Nombre <input type="text" data-field="name" required /></label>
+              <label>Nombre corto <input type="text" data-field="shortName" /></label>
+              <label>Iniciales (logo) <input type="text" data-field="initials" maxlength="3" /></label>
+              <label>Subtitulo <input type="text" data-field="subtitle" /></label>
+              <label class="admin-form__full">Descripcion <textarea data-field="description" rows="2"></textarea></label>
+              <label class="admin-form__full">Concepto (seccion "La experiencia") <textarea data-field="concept" rows="2"></textarea></label>
+              <label class="admin-form__full">
+                Promesas (separadas por coma)
+                <input type="text" data-field="promise" />
+              </label>
+            </fieldset>
+
+            <fieldset>
+              <legend>Datos destacados (debajo de la portada)</legend>
+              <label>Dato 1 <input type="text" data-field="highlightValue0" /></label>
+              <label>Descripcion 1 <input type="text" data-field="highlightLabel0" /></label>
+              <label>Dato 2 <input type="text" data-field="highlightValue1" /></label>
+              <label>Descripcion 2 <input type="text" data-field="highlightLabel1" /></label>
+              <label>Dato 3 <input type="text" data-field="highlightValue2" /></label>
+              <label>Descripcion 3 <input type="text" data-field="highlightLabel2" /></label>
+            </fieldset>
+
+            <fieldset>
+              <legend>Contacto y ubicacion</legend>
+              <label>Telefono <input type="text" data-field="phone" /></label>
+              <label>WhatsApp (solo numeros) <input type="text" data-field="whatsapp" /></label>
+              <label>Email <input type="email" data-field="email" /></label>
+              <label>Instagram <input type="text" data-field="instagram" /></label>
+              <label>Direccion <input type="text" data-field="address" /></label>
+              <label>Barrio / zona <input type="text" data-field="neighborhood" /></label>
+              <label>Ciudad <input type="text" data-field="city" /></label>
+              <label class="admin-form__full">
+                Texto de busqueda para el mapa
+                <input type="text" data-field="mapQuery" />
+              </label>
+            </fieldset>
+
+            <fieldset data-hero-fieldset>
+              <legend>Portada (hero)</legend>
+              <div class="admin-form__full" data-hero-image-slot></div>
+              <label>Texto pequeno <input type="text" data-field="heroEyebrow" /></label>
+              <label>Titulo <input type="text" data-field="heroTitle" /></label>
+              <label class="admin-form__full">Texto <textarea data-field="heroText" rows="2"></textarea></label>
+              <label>Boton principal <input type="text" data-field="heroPrimaryCta" /></label>
+            </fieldset>
+
+            <fieldset>
+              <legend>Nota / recomendacion</legend>
+              <label>Titulo <input type="text" data-field="notesTitle" /></label>
+              <label class="admin-form__full">Texto <textarea data-field="notesBody" rows="2"></textarea></label>
+            </fieldset>
+
+            <fieldset>
+              <legend>CTA final</legend>
+              <label>Titulo <input type="text" data-field="ctaTitle" /></label>
+              <label class="admin-form__full">Texto <textarea data-field="ctaText" rows="2"></textarea></label>
+            </fieldset>
+
+            <div class="admin-form__actions">
+              <button type="submit" class="button button--primary">Guardar cambios</button>
+            </div>
+          </form>
+        </section>
+
+        <!-- Cuenta -->
+        <section class="admin-panel" data-admin-panel="cuenta" hidden>
+          <h1>Cuenta</h1>
+          <form class="admin-form admin-form--narrow" data-password-form>
+            <fieldset>
+              <legend>Cambiar contrasena</legend>
+              <label class="admin-form__full">
+                Contrasena actual
+                <input type="password" data-password-current autocomplete="current-password" required />
+              </label>
+              <label>
+                Nueva contrasena
+                <input type="password" data-password-new autocomplete="new-password" minlength="6" required />
+              </label>
+              <label>
+                Repetir nueva contrasena
+                <input type="password" data-password-repeat autocomplete="new-password" minlength="6" required />
+              </label>
+            </fieldset>
+            <p class="admin-form__error" data-password-error hidden></p>
+            <div class="admin-form__actions">
+              <button type="submit" class="button button--primary">Actualizar contrasena</button>
+            </div>
+          </form>
+          <p class="admin-muted">
+            En esta demo la contrasena se guarda en este navegador. Cuando el proyecto tenga backend se
+            reemplaza por un inicio de sesion real.
+          </p>
         </section>
       </main>
     </div>
@@ -247,5 +351,19 @@
         <div data-modal-body></div>
       </div>
     </div>
+
+    <div class="modal modal--confirm" data-confirm hidden>
+      <div class="modal__backdrop" data-confirm-cancel></div>
+      <div class="modal__panel modal__panel--small" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title">
+        <h3 id="confirm-title" class="confirm__title" data-confirm-title></h3>
+        <p class="confirm__message" data-confirm-message></p>
+        <div class="confirm__actions">
+          <button type="button" class="button button--outline-dark" data-confirm-cancel>Volver</button>
+          <button type="button" class="button button--danger-solid" data-confirm-accept>Confirmar</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" data-toast role="status" aria-live="polite" hidden></div>
   </body>
 </html>
