@@ -14,6 +14,11 @@
     <link rel="stylesheet" href="./src/styles.css" />
     <script src="./src/data.js" defer></script>
     <script src="./src/utils.js" defer></script>
+    <script src="./src/supabase-config.js" defer></script>
+    <script src="./src/supabase.js" defer></script>
+    <script src="./src/rules.js" defer></script>
+    <script src="./src/store-local.js" defer></script>
+    <script src="./src/store-remote.js" defer></script>
     <script src="./src/store.js" defer></script>
     <script src="./src/auth.js" defer></script>
     <script src="./src/admin.js" defer></script>
@@ -23,7 +28,11 @@
       <form class="admin-login__card" data-login-form>
         <span class="utility-header__mark">RB</span>
         <h1>Panel administrativo</h1>
-        <p>Ingresa la contrasena para gestionar la agenda, los servicios, los barberos y el sitio.</p>
+        <p>Ingresa para gestionar la agenda, los servicios, los barberos y el sitio.</p>
+        <label data-login-email-field hidden>
+          Correo
+          <input type="email" data-login-email autocomplete="username" />
+        </label>
         <label>
           Contrasena
           <input type="password" data-login-password autocomplete="current-password" required />
@@ -73,14 +82,21 @@
             <h2>Proximas citas</h2>
             <div data-admin-upcoming></div>
           </div>
-          <div class="admin-block admin-block--danger">
-            <h2>Datos de la demo</h2>
+          <div class="admin-block admin-block--danger" data-local-data hidden>
+            <h2>Modo local (sin conexion)</h2>
             <p>
-              Todo se guarda en este navegador (localStorage). Si algo se dano probando el panel, puedes
-              restaurar los datos de ejemplo originales.
+              El sitio no tiene configurada la base de datos, asi que todo se guarda solo en este navegador.
+              Si algo se dano probando el panel, puedes restaurar los datos de ejemplo originales.
             </p>
             <p class="admin-muted" data-storage-usage></p>
             <button type="button" class="button button--outline-dark" data-reset-demo>Restaurar datos de ejemplo</button>
+          </div>
+          <div class="admin-block" data-remote-data hidden>
+            <h2>Datos en la nube</h2>
+            <p class="admin-muted">
+              Los cambios se guardan en la base de datos y se ven al instante en el sitio publico y en
+              cualquier dispositivo. Las citas nuevas de los clientes aparecen solas en la Agenda.
+            </p>
           </div>
         </section>
 
@@ -312,6 +328,7 @@
         <!-- Cuenta -->
         <section class="admin-panel" data-admin-panel="cuenta" hidden>
           <h1>Cuenta</h1>
+          <p class="admin-muted" data-account-email hidden></p>
           <form class="admin-form admin-form--narrow" data-password-form>
             <fieldset>
               <legend>Cambiar contrasena</legend>
@@ -333,10 +350,6 @@
               <button type="submit" class="button button--primary">Actualizar contrasena</button>
             </div>
           </form>
-          <p class="admin-muted">
-            En esta demo la contrasena se guarda en este navegador. Cuando el proyecto tenga backend se
-            reemplaza por un inicio de sesion real.
-          </p>
         </section>
       </main>
     </div>

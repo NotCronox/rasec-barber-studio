@@ -1,182 +1,136 @@
-# Rasec Dev - Proyecto #02: Barberia
+# Rasec Barber Studio
 
-Primera etapa del proyecto: base publica profesional y reutilizable para una barberia.
+Plataforma web para barberia con agenda de citas en linea y panel administrativo, desarrollada
+para el portafolio de Rasec Dev.
 
-## Fase 1 - Concepto, identidad y estructura
+Rasec Barber Studio es una barberia ficticia ubicada en el Centro Historico de Cartagena. El
+proyecto demuestra un producto completo: sitio publico, reservas en linea con disponibilidad en
+tiempo real, gestion de la cita por parte del cliente y un back office para operar el negocio.
 
-- Identidad inicial para una barberia de muestra: nombre, promesa, tono visual y datos del negocio.
-- Estructura escalable con contenido separado en `src/data.js`.
-- Base de pagina publica en `index.html`.
-- Estilos globales y responsive en `src/styles.css`.
-- Comportamiento liviano en `src/app.js`.
-- Imagenes profesionales libres desde Pexels, centralizadas en `src/data.js`.
+## Tecnologias
 
-## Fase 2 - Pagina publica
-
-Se construyo la pagina publica con:
-
-- Inicio con hero visual y CTA.
-- Datos destacados de la barberia.
-- Seccion de servicios con precio, duracion, tags, imagen y disponibilidad.
-- Seccion de barberos con foto, especialidad, bio, disponibilidad y galeria de trabajos realizados.
-- Informacion de contacto junto a un mapa de ubicacion embebido.
-- Horarios.
-- CTA final hacia la agenda de citas (en la Fase 2 original iba a WhatsApp).
-
-### Ubicacion
-
-La barberia esta ubicada en el Centro Historico de Cartagena. La direccion se define en `business.address`, `business.neighborhood`, `business.city` y `business.mapQuery` dentro de `src/data.js`. Desde ahi se genera automaticamente:
-
-- El mapa embebido de Google Maps (no requiere API key).
-- El boton "Abrir en Google Maps" con la ubicacion exacta.
-
-### Galeria por barbero
-
-Cada barbero en `src/data.js` tiene un arreglo `gallery` con fotos de trabajos realizados. En la tarjeta del barbero aparece un boton "Ver galeria" que abre un modal con esas fotos.
-
-## Fase 3 - Panel administrativo y reservas (demo local)
-
-Se agrego un back office completo y un sistema de citas, pensado como demo local que luego
-se puede conectar a un backend real sin rehacer la interfaz.
-
-### Para el cliente
-
-- **`reserva.html`** - asistente de reserva: servicio, barbero, dia (calendario) y hora.
-  - Solo aparecen los barberos que hacen el servicio elegido.
-  - El calendario bloquea dias pasados, dias cerrados, dias de descanso o ausencia del barbero,
-    dias sin horarios libres y fechas mas alla de la ventana de reserva (30 dias por defecto).
-  - Los horarios ya ocupados se bloquean, teniendo en cuenta la duracion de cada servicio, y se
-    actualizan en vivo si alguien reserva desde otra pestana.
-  - Si el horario se ocupa justo mientras el cliente confirma, se le avisa y puede elegir otro.
-  - Al confirmar recibe un **codigo de reserva** (por ejemplo `K7Q2MX`). WhatsApp queda solo como
-    aviso opcional despues de reservar, o para preguntas generales.
-- **`mi-cita.html`** - con el codigo y el telefono, el cliente consulta el estado de su cita y
-  puede cancelarla (si todavia no ha pasado). El horario queda libre al instante.
-- Los botones "Reservar" del sitio publico llevan a `reserva.html` con el servicio o barbero
-  preseleccionado. Los servicios o barberos pausados no muestran boton de reserva.
-
-### Para la barberia (`admin.html`)
-
-- **Resumen**: citas de hoy, proximos 7 dias, pendientes por confirmar y proximas citas.
-- **Agenda**: vista del dia con una columna por barbero, franja semanal con el numero de citas
-  por dia y linea de la hora actual. Clic en un espacio libre para crear una cita a mano (clientes
-  sin cita o que llaman por telefono), o en una cita para ver su detalle.
-- **Detalle de cita**: cambiar el estado (pendiente / confirmada / cancelada), escribirle al cliente
-  por WhatsApp con un mensaje ya redactado segun el estado, o eliminarla.
-- **Reservas**: tabla con filtros por barbero, estado, fecha y buscador por nombre, telefono o codigo.
-- **Servicios** y **Barberos**: crear, editar, pausar y eliminar. Cada barbero define que
-  servicios realiza, sus dias de descanso semanales y sus ausencias o vacaciones por fechas.
-- **Horarios**: horario semanal y hasta cuantos dias adelante se puede reservar.
-- **Sitio y negocio**: todo el contenido publico (datos, foto de portada, textos, datos destacados).
-- **Cuenta**: cambio de contrasena.
-- **Fotos**: en servicios, barberos, galerias y portada se puede pegar una URL o subir una foto
-  desde el equipo. La foto se reduce a 1000 px y se comprime antes de guardarse.
-- **Protecciones**: antes de eliminar un servicio o barbero con citas futuras, cerrar un dia con
-  citas o marcar un descanso que choca con citas existentes, el panel avisa cuantas citas quedan
-  afectadas. Tambien valida que la apertura sea antes del cierre y que las ausencias tengan fechas
-  validas.
-
-### Arquitectura: por que localStorage y como migrar a un backend real
-
-Por ahora todo (contenido del sitio + reservas) se guarda en el navegador con `localStorage`,
-sin servidor. Esto fue una decision explicita para poder construir y probar el flujo completo
-(panel + agenda + bloqueo de horarios) sin depender de infraestructura externa todavia.
-
-Para que el dia de manana cambiar a un backend real (por ejemplo Supabase) sea barato, toda la
-persistencia pasa por una sola capa:
-
-- **`src/store.js`** - unico punto que lee/escribe datos. Expone funciones como
-  `getState()`, `saveService()`, `saveBarber()`, `saveHours()`, `getSlots()`,
-  `createBooking()`, `cancelBookingByCustomer()`, etc. Ninguna pagina toca `localStorage`
-  directamente, solo llaman a `window.RasecStore`.
-- Las **reglas de negocio** tambien viven en `store.js`: disponibilidad por barbero, ventana de
-  reserva, choques de horario, validaciones y codigos de reserva. Son las mismas reglas que
-  tendria que aplicar un backend, asi que al migrar se trasladan tal cual.
-- **Varias pestanas a la vez**: cada cambio parte de lo guardado en ese instante (no de una copia
-  vieja en memoria), asi una pestana abierta hace rato nunca borra cambios hechos en otra. Las
-  paginas abiertas se actualizan solas cuando otra pestana guarda algo.
-- **`src/auth.js`** - puerta de acceso del admin (`window.RasecAuth`). Hoy compara la
-  contrasena contra un valor guardado en el navegador; no es seguridad real.
-
-El dia que se conecte un backend, solo hay que reescribir `store.js` (para que sus funciones
-hagan `fetch()` a una API en vez de leer `localStorage`) y `auth.js` (para usar autenticacion
-real, por ejemplo Supabase Auth, como ya se hizo en Brasa Marina). El resto del codigo no deberia
-necesitar cambios.
-
-### Acceso al panel
-
-```text
-admin.html
-Contrasena por defecto: rasec2025
-```
-
-La contrasena se cambia desde la pestana **Cuenta** del panel. Como es una demo local, cada
-navegador o dispositivo tiene sus propios datos: lo que se edita en el admin de una computadora
-no se ve en el sitio publico abierto en otra, hasta que haya un backend compartido.
-
-### Limite de espacio
-
-`localStorage` guarda unos 5 MB por sitio. Las fotos subidas desde el equipo ocupan espacio ahi
-(unos 50 a 150 KB cada una despues de comprimirlas); las que se ponen como URL casi no ocupan.
-El panel muestra el espacio usado en la pestana Resumen y avisa con un mensaje claro si ya no hay
-espacio, sin guardar cambios a medias.
-
-### Datos de ejemplo
-
-Si algo se daña probando el panel, el boton "Restaurar datos de ejemplo" (pestana Resumen del
-admin) borra las reservas y cambios, y vuelve a los datos originales de `src/data.js`.
-
-## Como cambiar el contenido
-
-Hay dos formas de editar el contenido:
-
-- **Desde el navegador**: entrando a `admin.html` con la contrasena y usando los formularios
-  (recomendado para probar el flujo real).
-- **Editando el codigo**: los valores por defecto (los que se usan la primera vez que alguien
-  abre el sitio, antes de que el admin cambie algo) viven en `src/data.js`:
-
-```text
-src/data.js
-```
-
-Desde ahi se pueden cambiar sin tocar la logica:
-
-- Servicios y precios
-- Barberos: galeria, servicios que realizan (`serviceIds`), descansos (`daysOff`) y ausencias (`timeOff`)
-- Horarios y ventana de reserva (`settings.bookingWindowDays`)
-- Fotos
-- Datos de contacto y ubicacion
-- Mensajes de CTA
-- Informacion del negocio
-
-Si alguien ya tenia datos guardados de una version anterior de la demo, `store.js` completa
-automaticamente los campos nuevos al cargar.
+- HTML, CSS y JavaScript, sin frameworks ni paso de build.
+- **Supabase**: base de datos Postgres, autenticacion del admin, almacenamiento de fotos y
+  actualizaciones en vivo (Realtime).
+- **Netlify**: hosting del sitio.
+- Modo local con `localStorage` para desarrollar sin conexion.
 
 ## Paginas
 
 | Pagina | Para quien | Que hace |
 | --- | --- | --- |
-| `index.html` | Clientes | Sitio publico |
+| `index.html` | Clientes | Sitio publico: servicios, barberos con galeria, ubicacion y horarios |
 | `reserva.html` | Clientes | Agendar una cita |
 | `mi-cita.html` | Clientes | Consultar o cancelar una cita con su codigo |
 | `admin.html` | Barberia | Panel administrativo |
 
-## Lo que todavia no se construyo
+## Funcionalidades
 
-- Backend real / base de datos compartida entre dispositivos (hoy es localStorage por
-  navegador, ver seccion de arquitectura arriba).
-- Autenticacion real del admin (hoy es una contrasena de demo, no segura).
-- Notificaciones automaticas al cliente o al negocio (email/SMS/WhatsApp) cuando cambia el
-  estado de una reserva. Hoy el admin le escribe al cliente con un clic desde el detalle de la cita.
+### Cliente
+
+- Asistente de reserva en 5 pasos: servicio, barbero, dia (calendario), hora y datos.
+  - Solo aparecen los barberos que hacen el servicio elegido.
+  - El calendario bloquea dias pasados, dias cerrados, dias de descanso o ausencia del barbero,
+    dias sin horarios libres y fechas mas alla de la ventana de reserva (30 dias por defecto).
+  - Los horarios ocupados se bloquean teniendo en cuenta la duracion de cada servicio, y se
+    actualizan mientras el cliente tiene el calendario abierto.
+  - Si el horario se ocupa justo mientras el cliente confirma, se le avisa y puede elegir otro.
+- Al reservar recibe un **codigo de reserva** (por ejemplo `K7Q2MX`). Con el codigo y su telefono
+  puede consultar el estado de la cita o cancelarla en `mi-cita.html`.
+- Los botones "Reservar" del sitio llevan a la agenda con el servicio o barbero ya elegido.
+  WhatsApp queda como aviso opcional despues de reservar o para preguntas generales.
+
+### Barberia (`admin.html`)
+
+- **Resumen**: citas de hoy, proximos 7 dias, pendientes por confirmar y proximas citas.
+- **Agenda**: vista del dia con una columna por barbero, franja semanal con el numero de citas y
+  linea de la hora actual. Las reservas nuevas de los clientes aparecen solas. Clic en un espacio
+  libre para crear una cita a mano (clientes sin cita o que llaman), o en una cita para ver su detalle.
+- **Detalle de cita**: cambiar el estado (pendiente / confirmada / cancelada), escribirle al cliente
+  por WhatsApp con un mensaje ya redactado segun el estado, o eliminarla.
+- **Reservas**: tabla con filtros por barbero, estado y fecha, y buscador por nombre, telefono o codigo.
+- **Servicios** y **Barberos**: crear, editar, pausar y eliminar. Cada barbero define que servicios
+  realiza, sus dias de descanso semanales y sus ausencias o vacaciones por fechas.
+- **Horarios**: horario semanal y hasta cuantos dias adelante se puede reservar.
+- **Sitio y negocio**: todo el contenido publico (datos, foto de portada, textos, datos destacados).
+- **Cuenta**: cambio de contrasena.
+- **Fotos**: se puede pegar una URL o subir una foto desde el equipo; se reduce a 1000 px, se
+  comprime y se guarda en Supabase Storage.
+- **Protecciones**: antes de eliminar un servicio o barbero con citas futuras, cerrar un dia con
+  citas o marcar un descanso que choca con citas existentes, el panel avisa cuantas citas quedan
+  afectadas.
+
+## Arquitectura
+
+```text
+index.html / reserva.html / mi-cita.html / admin.html
+        |
+   src/store.js  (window.RasecStore: unico punto de acceso a los datos)
+        |
+   +----+-------------------------+
+   |                              |
+src/store-remote.js          src/store-local.js
+Supabase (produccion)        localStorage (desarrollo sin conexion)
+```
+
+- `src/store.js` elige el proveedor: Supabase si `src/supabase-config.js` tiene credenciales,
+  localStorage si no. Las paginas no saben cual se esta usando.
+- `src/rules.js` contiene las reglas de negocio (disponibilidad, choques, validaciones). El
+  navegador las usa para pintar el calendario al instante, y **el servidor las vuelve a validar**
+  en `database/schema.sql`, asi que no se pueden saltar desde el navegador.
+- `src/auth.js`: con Supabase, inicio de sesion real (correo + contrasena de Supabase Auth) y
+  verificacion de que la cuenta sea administradora.
+- Los clientes nunca leen la tabla de citas: solo reciben horarios ocupados sin datos personales.
+- La base de datos impide fisicamente que un barbero tenga dos citas que se crucen, incluso si dos
+  personas confirman al mismo tiempo.
+
+Detalles de seguridad y del modelo de datos en [`database/README.md`](database/README.md).
+
+## Puesta en marcha
+
+### 1. Base de datos
+
+Sigue [`database/README.md`](database/README.md): crear el proyecto de Supabase, ejecutar
+`schema.sql` y `seed.sql`, crear el usuario administrador y poner la URL y la *anon key* en
+`src/supabase-config.js`.
+
+### 2. Hosting en Netlify
+
+1. En Netlify: **Add new site > Import an existing project > GitHub** y elige este repositorio.
+2. No hace falta configurar nada: `netlify.toml` indica que se publica la carpeta tal cual (no
+   hay paso de build).
+3. Cada push a `master` publica una nueva version automaticamente.
+
+### 3. Desarrollo local
+
+El proyecto se sirve como archivos estaticos. Con cualquier servidor local:
+
+```bash
+npx serve .
+```
+
+Si `src/supabase-config.js` tiene credenciales, el sitio local usa la base de datos real. Si esta
+vacio, usa `localStorage` y el panel entra con la contrasena `rasec2025`.
+
+## Como cambiar el contenido
+
+- **Desde el panel** (`admin.html`): servicios, precios, barberos, horarios, fotos y textos.
+- **Datos iniciales**: `src/data.js` define el contenido de ejemplo. Si lo cambias, regenera
+  `database/seed.sql` para que la base de datos arranque con los mismos datos.
+
+## Pendiente para una version comercial
+
+- Notificaciones automaticas al cliente (email/SMS/WhatsApp) cuando cambia el estado de una cita.
+  Hoy el admin le escribe con un clic desde el detalle de la cita.
 - Pagos o senas para confirmar una cita.
-- Descansos parciales dentro del dia (por ejemplo, almuerzo de un barbero): hoy los descansos
-  y ausencias son de dias completos; un bloqueo corto se puede simular creando una cita manual.
-
-Eso queda para cuando este proyecto se conecte a un backend real.
+- Descansos parciales dentro del dia (por ejemplo, el almuerzo de un barbero). Hoy los descansos y
+  ausencias son de dias completos; un bloqueo corto se puede hacer con una cita manual.
+- Recordatorios automaticos el dia anterior a la cita.
 
 ## Imagenes
 
-Las imagenes usadas en esta etapa vienen de Pexels y estan referenciadas desde `src/data.js`. La licencia de Pexels permite usarlas gratis en proyectos personales y comerciales, sin atribucion obligatoria.
+Las imagenes vienen de Pexels y estan referenciadas desde `src/data.js`. La licencia de Pexels
+permite usarlas gratis en proyectos personales y comerciales, sin atribucion obligatoria.
 
 Creditos:
 
@@ -202,3 +156,8 @@ Creditos:
 - Sephina Cornwall: https://www.pexels.com/photo/black-and-white-close-up-barbershop-haircut-32351040/
 
 Licencia: https://www.pexels.com/license/
+
+## Nota de portafolio
+
+Este proyecto no representa un cliente real. Es una pieza conceptual desarrollada para mostrar
+capacidades de diseno y desarrollo web de Rasec Dev.

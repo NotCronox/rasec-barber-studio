@@ -9,8 +9,9 @@
   const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
 
   const STEPS = ["service", "barber", "datetime", "customer", "confirm"];
+  const AVAILABILITY_REFRESH_MS = 45000;
 
-  let data = store.getState();
+  let data = null;
 
   const draft = {
     serviceId: null,
@@ -353,6 +354,22 @@
     stepIndex = Math.max(0, Math.min(STEPS.length - 1, index));
     furthestStep = Math.max(furthestStep, stepIndex);
     renderPanel();
+    if (STEPS[stepIndex] === "datetime") refreshAvailability();
+  }
+
+  // Trae los horarios ocupados mas recientes (otras personas pueden estar reservando).
+  async function refreshAvailability() {
+    try {
+      await store.refreshAvailability();
+    } catch (error) {
+      console.warn("No se pudo actualizar la disponibilidad.", error);
+      return;
+    }
+    data = store.getState();
+    if (completed || STEPS[stepIndex] !== "datetime") return;
+    renderCalendar();
+    renderSlots();
+    renderActions();
   }
 
   function selectedMonthFor(iso) {
@@ -361,9 +378,16 @@
 
   // ---------- Confirmacion ----------
 
-  function handleConfirm() {
+  async function handleConfirm() {
+    const button = $("[data-step-confirm]");
+    if (button.disabled) return;
+    const label = button.textContent;
+    button.disabled = true;
+    button.textContent = "Reservando...";
+    $("[data-booking-error]").hidden = true;
+
     try {
-      const booking = store.createBooking({
+      const booking = await store.createBooking({
         serviceId: draft.serviceId,
         barberId: draft.barberId,
         date: draft.date,
@@ -376,6 +400,9 @@
     } catch (error) {
       $("[data-booking-error-text]").textContent = error.message;
       $("[data-booking-error]").hidden = false;
+    } finally {
+      button.disabled = false;
+      button.textContent = label;
     }
   }
 
@@ -496,22 +523,43 @@
     });
   }
 
-  store.subscribe((nextState, meta) => {
-    if (meta.source !== "external" || completed) return;
-    data = nextState;
-    setBrand();
-    const current = STEPS[stepIndex];
-    if (current === "service") renderServiceOptions();
-    if (current === "barber") renderBarberOptions();
-    if (current === "datetime") {
-      renderCalendar();
-      renderSlots();
+  async function start() {
+    wireEvents();
+    try {
+      await store.init();
+    } catch (error) {
+      console.error(error);
+      $("[data-service-options]").innerHTML = `<p class="load-error">No pudimos cargar la agenda. Revisa tu conexion y recarga la pagina.</p>`;
+      return;
     }
-    renderActions();
-  });
 
-  setBrand();
-  applyQueryParams();
-  wireEvents();
-  renderPanel();
+    data = store.getState();
+    setBrand();
+    applyQueryParams();
+    renderPanel();
+    if (STEPS[stepIndex] === "datetime") refreshAvailability();
+
+    store.subscribe((nextState, meta) => {
+      if (meta.source !== "external" || completed) return;
+      data = nextState;
+      setBrand();
+      const current = STEPS[stepIndex];
+      if (current === "service") renderServiceOptions();
+      if (current === "barber") renderBarberOptions();
+      if (current === "datetime") {
+        renderCalendar();
+        renderSlots();
+      }
+      renderActions();
+    });
+
+    setInterval(() => {
+      if (document.visibilityState === "visible") refreshAvailability();
+    }, AVAILABILITY_REFRESH_MS);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") refreshAvailability();
+    });
+  }
+
+  start();
 })();

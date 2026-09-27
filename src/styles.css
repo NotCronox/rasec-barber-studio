@@ -1971,6 +1971,17 @@ body.no-scroll {
 
 /* ---------- Sitio publico ---------- */
 
+.load-error {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 16px 18px;
+  border: 1px solid #f3c8cb;
+  border-radius: var(--radius);
+  color: #7a1822;
+  background: #fff7f7;
+  font-weight: 700;
+}
+
 .barber-card .barber-card__rest {
   margin-top: 10px;
   color: rgba(255, 255, 255, 0.6);
