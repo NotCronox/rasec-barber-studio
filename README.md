@@ -3,6 +3,8 @@
 Plataforma web para barberia con agenda de citas en linea y panel administrativo, desarrollada
 para el portafolio de Rasec Dev.
 
+**Sitio en vivo:** https://rasecbarberstudio-rasecdev.netlify.app
+
 Rasec Barber Studio es una barberia ficticia ubicada en el Centro Historico de Cartagena. El
 proyecto demuestra un producto completo: sitio publico, reservas en linea con disponibilidad en
 tiempo real, gestion de la cita por parte del cliente y un back office para operar el negocio.
