@@ -535,6 +535,16 @@ create policy "Admins can manage bookings"
 on public.bookings for all to authenticated
 using (public.is_admin()) with check (public.is_admin());
 
+-- Permisos explicitos sobre las tablas (no dependen de la opcion "Automatically expose
+-- new tables" del proyecto). Los visitantes solo pueden leer el contenido publico; ni
+-- siquiera tienen acceso a la tabla de citas. RLS agrega la segunda capa de control.
+revoke all on public.admin_profiles, public.site_content, public.services, public.barbers, public.hours, public.bookings
+  from anon, authenticated;
+grant select on public.site_content, public.services, public.barbers, public.hours to anon, authenticated;
+grant insert, update, delete on public.site_content, public.services, public.barbers, public.hours to authenticated;
+grant select, insert, update, delete on public.bookings to authenticated;
+grant select on public.admin_profiles to authenticated;
+
 revoke all on function public.create_booking(text, text, date, time, text, text, text, text, text) from public;
 revoke all on function public.find_booking(text, text) from public;
 revoke all on function public.cancel_booking(text, text) from public;
