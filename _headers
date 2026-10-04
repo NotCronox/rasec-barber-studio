@@ -1,0 +1,15 @@
+# Encabezados de Cloudflare Pages. Sitio estatico: no hay paso de build.
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: SAMEORIGIN
+
+# Cloudflare sirve admin.html como /admin: se cubren las dos rutas.
+/admin
+  X-Robots-Tag: noindex, nofollow
+/admin.html
+  X-Robots-Tag: noindex, nofollow
+
+# Los scripts y estilos cambian en cada deploy: que el navegador siempre revise si hay version nueva.
+/src/*
+  Cache-Control: public, max-age=0, must-revalidate

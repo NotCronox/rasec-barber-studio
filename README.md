@@ -3,7 +3,7 @@
 Plataforma web para barberia con agenda de citas en linea y panel administrativo, desarrollada
 para el portafolio de Rasec Dev.
 
-**Sitio en vivo:** https://rasecbarberstudio-rasecdev.netlify.app
+**Sitio en vivo:** https://rasecbarberstudio-rasecdev.pages.dev
 
 Rasec Barber Studio es una barberia ficticia ubicada en el Centro Historico de Cartagena. El
 proyecto demuestra un producto completo: sitio publico, reservas en linea con disponibilidad en
@@ -14,7 +14,7 @@ tiempo real, gestion de la cita por parte del cliente y un back office para oper
 - HTML, CSS y JavaScript, sin frameworks ni paso de build.
 - **Supabase**: base de datos Postgres, autenticacion del admin, almacenamiento de fotos y
   actualizaciones en vivo (Realtime).
-- **Netlify**: hosting del sitio.
+- **Cloudflare Pages**: hosting del sitio.
 - Modo local con `localStorage` para desarrollar sin conexion.
 
 ## Paginas
@@ -96,11 +96,12 @@ Sigue [`database/README.md`](database/README.md): crear el proyecto de Supabase,
 `schema.sql` y `seed.sql`, crear el usuario administrador y poner la URL y la *anon key* en
 `src/supabase-config.js`.
 
-### 2. Hosting en Netlify
+### 2. Hosting en Cloudflare Pages
 
-1. En Netlify: **Add new site > Import an existing project > GitHub** y elige este repositorio.
-2. No hace falta configurar nada: `netlify.toml` indica que se publica la carpeta tal cual (no
-   hay paso de build).
+1. En Cloudflare: **Workers & Pages > Create application > Pages > Import an existing Git
+   repository** y elige este repositorio.
+2. Deja vacios el comando de build y la carpeta de salida: se publica la carpeta tal cual (no hay
+   paso de build). Los encabezados de seguridad y de cache estan en `_headers`.
 3. Cada push a `master` publica una nueva version automaticamente.
 
 ### 3. Desarrollo local
