@@ -5,6 +5,11 @@ para el portafolio de Rasec Dev.
 
 **Sitio en vivo:** https://rasecbarberstudio-rasecdev.pages.dev
 
+**Demo con panel libre:** https://rasecbarberstudio-demo.pages.dev (el panel esta en `/admin` y la
+contrasena ya viene escrita). Es el mismo repositorio: cuando la direccion termina en
+`-demo.pages.dev`, `src/supabase-config.js` deja a Supabase de lado y cada visitante prueba con
+datos de ejemplo guardados en su navegador.
+
 Rasec Barber Studio es una barberia ficticia ubicada en el Centro Historico de Cartagena. El
 proyecto demuestra un producto completo: sitio publico, reservas en linea con disponibilidad en
 tiempo real, gestion de la cita por parte del cliente y un back office para operar el negocio.

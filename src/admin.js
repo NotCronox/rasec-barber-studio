@@ -268,6 +268,8 @@
     $("[data-login-email-field]").hidden = !auth.requiresEmail;
     $("[data-login-email]").required = auth.requiresEmail;
     $("[data-login-hint]").hidden = auth.mode !== "local" || auth.hasCustomPassword();
+    // En el sitio de demostracion la contrasena ya viene escrita: basta con pulsar Entrar.
+    if (window.RASEC_DEMO_SITE && !auth.hasCustomPassword()) $("[data-login-password]").value = auth.DEFAULT_PASSWORD;
     const error = $("[data-login-error]");
     error.textContent = message;
     error.hidden = !message;
